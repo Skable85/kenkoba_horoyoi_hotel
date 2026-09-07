@@ -1,0 +1,3265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ケンコバの、ほろ酔い一軒 ― ビジホ泊 立ち寄り酒場マップ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DotGothic16&display=swap" rel="stylesheet">
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet MarkerCluster CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<style>
+  :root{
+    --bg:#16110d;
+    --bg-panel:#20180f;
+    --paper:#f4e8cf;
+    --paper-2:#eeddb9;
+    --ink:#2c2015;
+    --lantern:#d0472c;
+    --lantern-dark:#9c2f1c;
+    --gold:#d6a44c;
+    --teal:#3f6e5f;
+    --cream:#f2e6d1;
+    --cream-dim:#c9b899;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--cream);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    line-height:1.7;
+    background-image:
+      radial-gradient(ellipse 900px 500px at 12% -10%, rgba(208,71,44,.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(214,164,76,.10), transparent 55%);
+  }
+  a{color:inherit;}
+  h1,h2,h3{font-family:'Shippori Mincho B1', serif; margin:0; letter-spacing:.02em;}
+
+  /* HERO */
+  .hero{
+    position:relative;
+    padding:5.5rem 1.5rem 4rem;
+    text-align:center;
+    overflow:hidden;
+    border-bottom:1px solid #3a2d1c;
+  }
+  .lantern-glow{
+    font-size:3.4rem;
+    display:inline-block;
+    filter: drop-shadow(0 0 18px rgba(208,71,44,.85)) drop-shadow(0 0 42px rgba(214,164,76,.35));
+    animation: sway 4.5s ease-in-out infinite;
+    margin-bottom:1.1rem;
+  }
+  @keyframes sway{
+    0%,100%{ transform: rotate(-3deg); }
+    50%{ transform: rotate(3deg); }
+  }
+  .hero h1{
+    font-size:clamp(2.1rem, 5.2vw, 3.6rem);
+    font-weight:800;
+    color:var(--cream);
+    text-shadow:0 2px 24px rgba(208,71,44,.35);
+  }
+  .hero h1 span{ color:var(--lantern); }
+  .hero p.lede{
+    max-width:620px;
+    margin:1.1rem auto 0;
+    color:var(--cream-dim);
+    font-size:1rem;
+  }
+  .hero .source-line{
+    margin-top:1.4rem;
+    font-size:.82rem;
+    color:var(--cream-dim);
+  }
+  .hero .source-line a{
+    color:var(--gold);
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+
+  .stat-strip{
+    display:flex;
+    justify-content:center;
+    gap:2.6rem;
+    margin-top:2.4rem;
+    flex-wrap:wrap;
+  }
+  .stat-strip div{ text-align:center; }
+  .stat-strip .num{
+    font-family:'Shippori Mincho B1', serif;
+    font-size:2rem;
+    font-weight:800;
+    color:var(--gold);
+  }
+  .stat-strip .lbl{
+    font-size:.72rem;
+    color:var(--cream-dim);
+    letter-spacing:.08em;
+  }
+
+  /* CONTROLS */
+  .controls{
+    max-width:1080px;
+    margin:0 auto;
+    padding:2.4rem 1.5rem 0;
+  }
+  .search-row{
+    display:flex;
+    gap:.7rem;
+    margin-bottom:1rem;
+    flex-wrap:wrap;
+  }
+  .search-row input{
+    flex:2;
+    min-width:220px;
+    background:var(--bg-panel);
+    border:1px solid #4a3a24;
+    color:var(--cream);
+    padding:.75rem 1rem;
+    border-radius:6px;
+    font-family:inherit;
+    font-size:.95rem;
+  }
+  .search-row select{
+    flex:1;
+    min-width:140px;
+    background:var(--bg-panel);
+    border:1px solid #4a3a24;
+    color:var(--cream);
+    padding:.75rem 1rem;
+    border-radius:6px;
+    font-family:inherit;
+    font-size:.95rem;
+    cursor:pointer;
+  }
+  .search-row input::placeholder{ color:var(--cream-dim); }
+  .search-row input:focus, .search-row select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+
+  .chip-row{
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+  }
+  .chip{
+    font-family:'DotGothic16', monospace;
+    font-size:.8rem;
+    padding:.45rem 1rem;
+    border-radius:99px;
+    border:1px solid #4a3a24;
+    background:transparent;
+    color:var(--cream-dim);
+    cursor:pointer;
+    transition:.15s;
+  }
+  .chip:hover{ border-color:var(--gold); color:var(--cream); }
+  .chip.active{
+    background:var(--lantern);
+    border-color:var(--lantern);
+    color:#fff;
+  }
+
+  /* MAP DESIGN */
+  .map-wrap{
+    max-width:1080px;
+    margin:1.6rem auto 0;
+    padding:0 1.5rem;
+  }
+  #map{
+    height:460px;
+    width:100%;
+    border-radius:12px;
+    border:1px solid #4a3a24;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    background: #111;
+  }
+  
+  /* Leaflet PopUp */
+  .leaflet-popup-content-wrapper {
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    padding: 4px;
+  }
+  .leaflet-popup-tip {
+    background: var(--paper) !important;
+  }
+  .popup-title{ font-family:'Shippori Mincho B1', serif; font-weight:800; font-size:1.05rem; margin-bottom:.2rem; color:var(--ink);}
+  .popup-loc{ font-size:.78rem; color:#6b5a3d; margin-bottom:.35rem; font-weight:700;}
+  .popup-desc{ font-size:.85rem; line-height:1.4; color:#3a2d1c;}
+  .popup-hotel{ font-size:.78rem; color:#4a3a24; margin-top:.4rem; border-top:1px dashed #c2a76e; padding-top:.35rem;}
+
+  .lantern-marker {
+    font-size: 26px;
+    text-align: center;
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .lantern-marker:hover {
+    transform: scale(1.25);
+  }
+
+  /* LIST */
+  .list-wrap{
+    max-width:1080px;
+    margin:2.6rem auto 5rem;
+    padding:0 1.5rem;
+  }
+  .list-wrap h2{
+    font-size:1.5rem;
+    color:var(--cream);
+    margin-bottom:.3rem;
+  }
+  .list-wrap .count{
+    font-size:.85rem;
+    color:var(--cream-dim);
+    margin-bottom:1.6rem;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:1.1rem;
+  }
+  .card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:10px;
+    padding:1.3rem 1.3rem 1.1rem;
+    position:relative;
+    box-shadow:0 10px 24px rgba(0,0,0,.28);
+    border:1px solid var(--paper-2);
+    display:flex;
+    flex-direction:column;
+    gap:.55rem;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:0; left:1.3rem;
+    width:26px; height:10px;
+    background:var(--lantern);
+    border-radius:0 0 4px 4px;
+  }
+  .card .eyebrow-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'DotGothic16', monospace;
+    font-size:.68rem;
+    color:#7a6944;
+    letter-spacing:.06em;
+    margin-top:.3rem;
+  }
+  .card .ep-tag {
+    background: var(--lantern);
+    color: #fff;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-weight: bold;
+  }
+  .card h3{
+    font-size:1.18rem;
+    color:var(--ink);
+    line-height:1.35;
+  }
+  .card .loc{
+    font-size:.82rem;
+    color:#6b5a3d;
+    font-weight:700;
+  }
+  .card .desc{
+    font-size:.88rem;
+    color:#3a2d1c;
+  }
+  .menu-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.4rem;
+    margin-top:.2rem;
+  }
+  .menu-tags span{
+    font-size:.72rem;
+    background:var(--teal);
+    color:#eef4f0;
+    padding:.22rem .6rem;
+    border-radius:4px;
+  }
+  .hotel-box{
+    background:var(--paper-2);
+    border:1px dashed #c2a76e;
+    border-radius:8px;
+    padding:.7rem .85rem;
+    margin-top:.15rem;
+  }
+  .hotel-box-head{
+    font-family:'DotGothic16', monospace;
+    font-size:.68rem;
+    color:var(--teal);
+    letter-spacing:.06em;
+    margin-bottom:.25rem;
+  }
+  .hotel-name{
+    font-family:'Shippori Mincho B1', serif;
+    font-weight:700;
+    font-size:.92rem;
+    color:var(--ink);
+  }
+  .hotel-line{
+    font-size:.76rem;
+    color:#6b5a3d;
+    margin-top:.15rem;
+  }
+  .hotel-price{
+    font-family:'DotGothic16', monospace;
+    font-size:.76rem;
+    color:var(--lantern-dark);
+    margin-top:.35rem;
+  }
+  
+  .card .btn-row{
+    display:flex;
+    gap:.4rem;
+    margin-top:.4rem;
+    flex-wrap:wrap;
+  }
+  .card .btn-row a,
+  .card .btn-row button{
+    font-family:'DotGothic16', monospace;
+    font-size:.72rem;
+    padding:.3rem .65rem;
+    border-radius:99px;
+    cursor:pointer;
+    transition:.15s;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+  }
+  .card .locate-btn{
+    background:none;
+    border:1px solid var(--lantern-dark);
+    color:var(--lantern-dark);
+  }
+  .card .locate-btn:hover{
+    background:var(--lantern);
+    color:#fff;
+    border-color:var(--lantern);
+  }
+  .card .gmap-btn{
+    background:none;
+    border:1px solid #3f6e5f;
+    color:#3f6e5f;
+  }
+  .card .gmap-btn:hover{
+    background:#3f6e5f;
+    color:#fff;
+  }
+
+  .empty-msg{
+    text-align:center;
+    color:var(--cream-dim);
+    padding:3rem 1rem;
+    font-size:.95rem;
+  }
+
+  footer{
+    border-top:1px solid #3a2d1c;
+    padding:2.4rem 1.5rem 3rem;
+    text-align:center;
+    font-size:.78rem;
+    color:var(--cream-dim);
+  }
+  footer a{ color:var(--gold); text-decoration:underline; text-underline-offset:3px;}
+  footer .disclaimer{
+    max-width:640px;
+    margin:1rem auto 0;
+    font-size:.72rem;
+    opacity:.75;
+  }
+
+  @media (max-width:520px){
+    .hero{ padding:4rem 1.2rem 3rem; }
+    #map{ height:360px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="lantern-glow">🏮</div>
+  <h1>ケンコバの、<span>ほろ酔い</span>一軒</h1>
+  <p class="lede">BS朝日「ケンコバのほろ酔いビジホ泊 全国版」の放送情報を集約。ケンドーコバヤシさんが泊まったビジホと立ち寄った名店まとめです。</p>
+  <p class="source-line">番組公式：<a href="https://www.bs-asahi.co.jp/business_hotel/" target="_blank" rel="noopener">BS朝日「ケンコバのほろ酔いビジホ泊 全国版」</a></p>
+  <div class="stat-strip">
+    <div><div class="num" id="stat-count">-</div><div class="lbl">軒 掲載</div></div>
+    <div><div class="num" id="stat-pref">-</div><div class="lbl">都道府県</div></div>
+    <div><div class="num" id="stat-region">-</div><div class="lbl">エリア</div></div>
+  </div>
+</header>
+
+<section class="controls">
+  <div class="search-row">
+    <input type="text" id="search" placeholder="店名・料理・地名・ホテル名・放送回で探す（例：#71、うなぎ、香川、高松）">
+    <select id="pref-select">
+      <option value="">すべての都道府県</option>
+    </select>
+  </div>
+  <div class="chip-row" id="chip-row"></div>
+</section>
+
+<section class="map-wrap">
+  <div id="map"></div>
+</section>
+
+<section class="list-wrap">
+  <h2>立ち寄り酒場一覧（放送順）</h2>
+  <div class="count" id="list-count"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty-msg" id="empty-msg" style="display:none;">条件に合うお店が見つかりませんでした。検索語やエリアを変えてお試しください。</div>
+</section>
+
+<footer>
+  <p>掲載の飲み屋・ホテル情報は番組の放送内容をもとにまとめたファンサイトです。営業状況・メニュー・価格・宿泊料金は変更されている場合があるため、訪問・予約前に各店舗／ホテルの最新情報をご確認ください。</p>
+  <p>参考：<a href="https://www.bs-asahi.co.jp/business_hotel/" target="_blank" rel="noopener">BS朝日 公式放送内容</a></p>
+  <p class="disclaimer">本サイトは番組・放送局・出演者とは関係のないファンによる非公式まとめです。地図上の位置は目安であり、実際の店舗所在地とは異なる場合があります。</p>
+</footer>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+const REGIONS = ["北海道","東北","関東","甲信越","中部","近畿","中国","四国","九州"];
+
+// 過去回データ（第1回〜第137回・SP含む）
+const RAW_SPOTS = [
+  /* 第1回 */
+  {
+    ep: "#1",
+    name: "新世界の居酒屋（第1回立ち寄り店）",
+    pref: "大阪府",
+    city: "大阪市（新世界）",
+    region: "近畿",
+    desc: "通天閣のお膝元・ジャンジャン横丁を散策し、ディープな新世界の雰囲気の中で一杯。",
+    tags: ["ジャンジャン横丁", "通天閣ビュー", "大衆酒場"],
+    date: "2023.10.05",
+    hotel: "ホテルサンプラザ",
+    hotelAccess: "新世界エリア徒歩圏内",
+    hotelNote: "大浴場から通天閣が眺められるビジホ",
+    hotelPrice: "要問合せ",
+    lat: 34.6508,
+    lng: 135.5064
+  },
+  /* 第2回 */
+  {
+    ep: "#2",
+    name: "酒蔵 ごたん田",
+    pref: "東京都",
+    city: "品川区（西五反田）",
+    region: "関東",
+    desc: "西五反田で長年気になっていた大衆酒場。小鯵の南蛮漬けは「オカンの倍ウマイ！」と絶賛。",
+    tags: ["マグロの串カツ", "明太ポテト", "小鯵の南蛮", "瓶ビール"],
+    date: "2023.10.12",
+    hotel: "京王プレッソイン 五反田",
+    hotelAccess: "JR五反田駅西口より徒歩4分",
+    hotelNote: "ReFaルーム・朝食カレー＆茶漬け",
+    hotelPrice: "10,800円～（1泊朝食付）",
+    lat: 35.6264,
+    lng: 139.7228
+  },
+  {
+    ep: "#2",
+    name: "PUB栄",
+    pref: "東京都",
+    city: "品川区（西五反田）",
+    region: "関東",
+    desc: "「五反田の北川景子」がママを務める名物ビル・五反田ヒルズの老舗パブ。ケンコバ行きつけ。",
+    tags: ["ハイボール", "油揚げとおもち", "隠しメニューの焼きそば"],
+    date: "2023.10.12",
+    hotel: "京王プレッソイン 五反田",
+    hotelAccess: "JR五反田駅西口より徒歩4分",
+    hotelNote: "ReFaルーム・朝食カレー＆茶漬け",
+    hotelPrice: "10,800円～（1泊朝食付）",
+    lat: 35.6258,
+    lng: 139.7222
+  },
+  /* 第3回 */
+  {
+    ep: "#3",
+    name: "やしの実食堂",
+    pref: "大阪府",
+    city: "大阪市（天満）",
+    region: "近畿",
+    desc: "マグロ専門店出身の店主が営む立ち呑み店。本鮪のあご肉は「牛が消えてもやっていける」と大絶賛。",
+    tags: ["本鮪頭部位4種盛り", "高知スタイルちくきゅー", "ダルマチューハイ"],
+    date: "2023.10.19",
+    hotel: "ROTA 105",
+    hotelAccess: "JR天満駅より徒歩3分",
+    hotelNote: "2023年5月オープン・テラス喫煙所・500円OFF券",
+    hotelPrice: "7,000円～（1泊素泊まり）",
+    lat: 34.7073,
+    lng: 135.5126
+  },
+  /* 第4回 */
+  {
+    ep: "#4",
+    name: "トロ政 有楽町日比谷店",
+    pref: "東京都",
+    city: "千代田区（有楽町）",
+    region: "関東",
+    desc: "産地直送の魚と豊富なレモンサワーが自慢の大衆居酒屋。激酸っぱい「酸っぱ会長」に挑む。",
+    tags: ["よだれレモンサワー", "馬刺し三種盛り", "あおさの揚げ出し豆腐", "蟹味噌甲羅焼き"],
+    date: "2023.10.26",
+    hotel: "レム日比谷",
+    hotelAccess: "日比谷駅・有楽町駅より徒歩4分",
+    hotelNote: "「眠り」特化・マッサージチェア完備",
+    hotelPrice: "14,540円（1泊）",
+    lat: 35.6738,
+    lng: 139.7597
+  },
+  /* 第5回 */
+  {
+    ep: "#5",
+    name: "野毛焼きそばセンターまるき 本店",
+    pref: "神奈川県",
+    city: "横浜市（野毛）",
+    region: "関東",
+    desc: "極太麺を使用したおつまみ焼きそばの人気店。絶品「スペシャル」と紅生姜たっぷりのまるきサワー。",
+    tags: ["極太麺焼きそば", "スペシャル", "大将のナポリタン", "まるきサワー"],
+    date: "2023.11.02",
+    hotel: "ホテルテラス横浜桜木町",
+    hotelAccess: "JR桜木町駅より徒歩5分",
+    hotelNote: "洞窟風の中浴場・無料お茶漬けサービス",
+    hotelPrice: "6,500円～（1泊朝食付）",
+    lat: 35.4471,
+    lng: 139.6288
+  },
+  /* 第6回 */
+  {
+    ep: "#6",
+    name: "うな鐵 大宮店",
+    pref: "埼玉県",
+    city: "さいたま市（大宮）",
+    region: "関東",
+    desc: "うなぎの希少部位を串焼きで楽しめる名店。タレの匂いに誘われて香ばしい串と熱燗で一杯。",
+    tags: ["うなぎ串焼き", "う巻き", "きも吸", "松竹梅"],
+    date: "2023.11.09",
+    hotel: "スーパーホテル Premier さいたま・大宮駅東口",
+    hotelAccess: "大宮駅東口より徒歩4分",
+    hotelNote: "天然温泉「氷川の湯」・ウェルカムバー",
+    hotelPrice: "9,800円～（1泊素泊まり）",
+    lat: 35.9082,
+    lng: 139.6258
+  },
+  {
+    ep: "#6",
+    name: "大宮南銀座バー姐",
+    pref: "埼玉県",
+    city: "さいたま市（大宮）",
+    region: "関東",
+    desc: "大宮南銀座で親子2人が営む温かい老舗スナック。特製ピーマンの肉詰めやおでんにほっこり。",
+    tags: ["スナック", "特製ピーマンの肉詰め", "手作りおでん"],
+    date: "2023.11.09",
+    hotel: "スーパーホテル Premier さいたま・大宮駅東口",
+    hotelAccess: "大宮駅東口より徒歩4分",
+    hotelNote: "天然温泉「氷川の湯」・ウェルカムバー",
+    hotelPrice: "9,800円～（1泊素泊まり）",
+    lat: 35.9048,
+    lng: 139.6247
+  },
+  /* 第7回 */
+  {
+    ep: "#7",
+    name: "津和野",
+    pref: "神奈川県",
+    city: "横浜市（関内）",
+    region: "関東",
+    desc: "創業40年の老舗大衆酒場。ウェルカムビールから始まり、ピリ辛のみそおでんや名物セクハラ焼きを堪能。",
+    tags: ["ウェルカムビール", "おまかせ刺身", "みそおでん", "セクハラ焼き"],
+    date: "2023.11.16",
+    hotel: "レンブラントスタイル横浜関内",
+    hotelAccess: "JR関内駅南口より徒歩1分",
+    hotelNote: "個室プライベートサウナ・サ飯オロポ",
+    hotelPrice: "9,480円（1泊サウナ込）",
+    lat: 35.4418,
+    lng: 139.6362
+  },
+  /* 第8回 */
+  {
+    ep: "#8",
+    name: "三櫂屋",
+    pref: "東京都",
+    city: "新宿区（四谷・荒木町）",
+    region: "関東",
+    desc: "風情溢れる荒木町で絶品豚しゃぶと全国の地酒が楽しめるお店。〆の出汁茶漬けまで最高。",
+    tags: ["名物豚しゃぶ", "青とび海苔", "ハツの醤油漬け", "出汁茶漬け"],
+    date: "2023.11.23",
+    hotel: "ホテルニューショーヘイ",
+    hotelAccess: "JR四ツ谷駅より徒歩3分",
+    hotelNote: "「深海」テーマ・無料ラウンジ（ワイン・軽食）",
+    hotelPrice: "11,900円（1泊朝食付）",
+    lat: 35.6888,
+    lng: 139.7212
+  },
+  {
+    ep: "#8",
+    name: "スナック京",
+    pref: "東京都",
+    city: "新宿区（四谷・荒木町）",
+    region: "関東",
+    desc: "荒木町の路地裏にたたずむ老舗スナック。常連さんとの楽しいカラオケとウイスキーソーダ割りを満喫。",
+    tags: ["スナック", "飲み放題", "カラオケ"],
+    date: "2023.11.23",
+    hotel: "ホテルニューショーヘイ",
+    hotelAccess: "JR四ツ谷駅より徒歩3分",
+    hotelNote: "「深海」テーマ・無料ラウンジ（ワイン・軽食）",
+    hotelPrice: "11,900円（1泊朝食付）",
+    lat: 35.6885,
+    lng: 139.7208
+  },
+  /* 第9回 */
+  {
+    ep: "#9",
+    name: "伍味酉本店",
+    pref: "愛知県",
+    city: "名古屋市（栄）",
+    region: "中部",
+    desc: "1956年創業の老舗居酒屋。手羽先、どて味噌串かつ、味噌おでんなど濃いめの名古屋メシを完食。",
+    tags: ["手羽先唐揚げ", "どて味噌串かつ", "どて味噌煮込み", "味噌おでん", "ビアボール"],
+    date: "2023.11.30",
+    hotel: "西鉄ホテル クルーム 名古屋",
+    hotelAccess: "地下鉄栄駅徒歩5分・久屋大通駅徒歩1分",
+    hotelNote: "14階天然温泉大浴場・寝湯・ボディマッサージ",
+    hotelPrice: "8,000円～（1泊素泊まり）",
+    lat: 35.1706,
+    lng: 136.9082
+  },
+  /* 第10回 */
+  {
+    ep: "#10",
+    name: "天ぷら酒場 上ル商店 神田店",
+    pref: "東京都",
+    city: "千代田区（神田）",
+    region: "関東",
+    desc: "ネオ大衆天ぷら居酒屋。フォアグラや煮卵など変わり種天ぷらと爽快な抹茶ハイを満喫。",
+    tags: ["フォアグラ天ぷら", "煮卵天ぷら", "うにいくら天", "京都宇治抹茶ハイ"],
+    date: "2023.12.07",
+    hotel: "トーセイホテル ココネ神田",
+    hotelAccess: "JR神田駅西口より徒歩3分",
+    hotelNote: "和モダンデザイン・レディース優先フロア",
+    hotelPrice: "12,000円～（1泊朝食付）",
+    lat: 35.6912,
+    lng: 139.7688
+  },
+  /* 第11回 */
+  {
+    ep: "#11",
+    name: "すりみや 神田淡路町店",
+    pref: "東京都",
+    city: "千代田区（神田須田町）",
+    region: "関東",
+    desc: "宮城県の郷土料理がウリの居酒屋。自家製のちくわやおでんが人気。サンドウィッチマンゆかりの三角油揚げも堪能。",
+    tags: ["自家製竹串ちくわ", "七品盛り合わせ", "ハッシュド蓮根", "名物三角油揚げ", "せり鍋"],
+    date: "2023.12.14",
+    hotel: "明神の湯 ドーミーインPREMIUM神田",
+    hotelAccess: "銀座線神田駅6番出口より徒歩数歩",
+    hotelNote: "最上階12階大浴場・サウナ・夜鳴きそば・湯上がりアイス",
+    hotelPrice: "17,900円～（1泊朝食付）",
+    lat: 35.6968,
+    lng: 139.7705
+  },
+  /* 1時間SP */
+  {
+    ep: "1時間SP",
+    name: "牛タンと蕎麦のさえ木",
+    pref: "福岡県",
+    city: "福岡市（中洲）",
+    region: "九州",
+    desc: "中洲エリアで1軒目に訪問。熟成厚切り牛タン焼きと〆のざるそば、そば湯を絶賛。",
+    tags: ["熟成厚切り牛タン焼き", "ざるそば", "そば湯", "キリンラガー"],
+    date: "2023.12.21",
+    hotel: "ホテルマイステイズ福岡天神南",
+    hotelAccess: "地下鉄七隈線 天神南駅より徒歩5分",
+    hotelNote: "無料コーヒー・多国籍朝食・元マンションの個性的客室",
+    hotelPrice: "11,390円～（1泊朝食付）",
+    lat: 33.5908,
+    lng: 130.4068
+  },
+  {
+    ep: "1時間SP",
+    name: "屋台・対州軒",
+    pref: "福岡県",
+    city: "福岡市（天神）",
+    region: "九州",
+    desc: "天神の賑やかな屋台。大将おまかせセットと芋焼酎お湯割りで屋台の情緒を満喫。",
+    tags: ["屋台", "大将おまかせセット", "芋焼酎お湯割り", "ちくわ明太"],
+    date: "2023.12.21",
+    hotel: "ホテルマイステイズ福岡天神南",
+    hotelAccess: "地下鉄七隈線 天神南駅より徒歩5分",
+    hotelNote: "無料コーヒー・多国籍朝食・元マンションの個性的客室",
+    hotelPrice: "11,390円～（1泊朝食付）",
+    lat: 33.5908,
+    lng: 130.3986
+  },
+  /* 第12回 */
+  {
+    ep: "#12",
+    name: "味仙 今池本店",
+    pref: "愛知県",
+    city: "名古屋市（今池）",
+    region: "中部",
+    desc: "台湾ラーメンで有名な元祖の店。汗だくになりながら青菜炒めや手羽先、台湾ラーメンを堪能。",
+    tags: ["台湾ラーメン", "青菜炒め", "五月豆炒め", "手羽先", "子袋"],
+    date: "2024.01.11",
+    hotel: "ホテルルートイン 名古屋今池駅前",
+    hotelAccess: "地下鉄今池駅12番出口から徒歩約1分",
+    hotelNote: "大浴場あり・無料バイキング朝食・リラクゼーションサービス",
+    hotelPrice: "6,350円～（1泊朝食付）",
+    lat: 35.1693,
+    lng: 136.9368
+  },
+  /* 第13回 */
+  {
+    ep: "#13",
+    name: "寿司居酒屋 恵",
+    pref: "兵庫県",
+    city: "尼崎市",
+    region: "近畿",
+    desc: "タイガース好きの店主が握る“虎推し”の寿司居酒屋。大将との意外な思い出話で大盛り上がり。",
+    tags: ["寿司盛り合わせ", "カンパチ", "マグロ", "エンガワ", "熱燗"],
+    date: "2024.01.18",
+    hotel: "ワイズホテル 阪神尼崎駅前",
+    hotelAccess: "阪神電車 尼崎駅北出口から徒歩1分",
+    hotelNote: "男女別大浴場・ミラブルzeroシャワー・美容用品無料貸出",
+    hotelPrice: "8,000円～（1泊朝食付）",
+    lat: 34.7178,
+    lng: 135.4143
+  },
+  /* 第14回 */
+  {
+    ep: "#14",
+    name: "味の店 一富",
+    pref: "福岡県",
+    city: "福岡市（中洲・人形小路）",
+    region: "九州",
+    desc: "人形小路にある創業64年の老舗小料理屋。博多郷土料理の鯖ごまや気になる「にゃんにゃん」、〆の若鶏スープご飯を絶賛。",
+    tags: ["鯖ごま", "にゃんにゃん", "おきうと", "若鶏スープご飯", "日本酒"],
+    date: "2024.01.25",
+    hotel: "福岡フローラルイン西中洲",
+    hotelAccess: "地下鉄 中洲川端駅から徒歩5分",
+    hotelNote: "選べるいびき枕・夜食無料カレー・農園産お米の朝食",
+    hotelPrice: "13,000円（1泊朝食付）",
+    lat: 33.5902,
+    lng: 130.4045
+  },
+  /* 第15回 */
+  {
+    ep: "#15",
+    name: "天ぷら すずき",
+    pref: "東京都",
+    city: "大田区（蒲田）",
+    region: "関東",
+    desc: "サンロードにある目の前で揚げるカウンター式の天ぷら専門店。ちょい飲みセットで一杯。",
+    tags: ["ちょい飲みセット", "ちくわ天", "焼き海苔", "アサヒ生ビール"],
+    date: "2024.02.01",
+    hotel: "ホテルアマネク 蒲田駅前",
+    hotelAccess: "JR蒲田駅・東急蒲田駅西口より徒歩1分",
+    hotelNote: "大浴場（ダージリンティーの香り）・VOD無料・作務衣",
+    hotelPrice: "17,000円～（1泊素泊まり）",
+    lat: 35.5623,
+    lng: 139.7145
+  },
+  {
+    ep: "#15",
+    name: "平壌冷麺 食道園",
+    pref: "東京都",
+    city: "大田区（蒲田・バーボンロード）",
+    region: "関東",
+    desc: "盛岡冷麺老舗から独立した店主が営む。こだわりの平壌冷麺を堪能し「東京でこれ食えるの凄い」と大満足。",
+    tags: ["平壌冷麺", "盛岡冷麺", "カクテキ", "ハイボール"],
+    date: "2024.02.01",
+    hotel: "ホテルアマネク 蒲田駅前",
+    hotelAccess: "JR蒲田駅・東急蒲田駅西口より徒歩1分",
+    hotelNote: "大浴場（ダージリンティーの香り）・VOD無料・作務衣",
+    hotelPrice: "17,000円～（1泊素泊まり）",
+    lat: 35.562,
+    lng: 139.7141
+  },
+  /* 第16回 */
+  {
+    ep: "#16",
+    name: "大衆酒場 若林",
+    pref: "千葉県",
+    city: "船橋市",
+    region: "関東",
+    desc: "ジンギスカンや豚焼肉が1人でも楽しめる人気店。姉妹店「増やま」から出前してもらったちくわ磯辺揚げも満喫。",
+    tags: ["ジンギスカン", "豚バラ", "ハツ刺し", "ホイス", "ちくわ磯辺揚げ"],
+    date: "2024.02.08",
+    hotel: "サンホテル船橋",
+    hotelAccess: "JR船橋駅・京成船橋駅より徒歩約7分",
+    hotelNote: "ウェルカムコーヒー・卵かけご飯＆豚汁食べ放題朝食",
+    hotelPrice: "7,300円～（1泊朝食付）",
+    lat: 35.7022,
+    lng: 139.9868
+  },
+  /* 第17回 */
+  {
+    ep: "#17",
+    name: "郷土料理 こふじ",
+    pref: "北海道",
+    city: "札幌市（中央区）",
+    region: "北海道",
+    desc: "地元民に愛される旬の魚を使った北海道料理店。お刺身盛り合わせやかすべ煮こごり、熱燗を満喫。",
+    tags: ["刺身盛り合わせ", "かすべ煮こごり", "ししゃも焼", "サッポロクラシック", "剣菱"],
+    date: "2024.02.22",
+    hotel: "ホテルリソル トリニティ札幌",
+    hotelAccess: "地下鉄南北線 大通駅3番出口より徒歩1分",
+    hotelNote: "最上階公園眺望の大浴場・アイスサービス・イル・キャンティ朝食",
+    hotelPrice: "15,000円～（1泊朝食付）",
+    lat: 43.0632,
+    lng: 141.3508
+  },
+  {
+    ep: "#17",
+    name: "小料理家 紫艶",
+    pref: "北海道",
+    city: "札幌市（すすきの）",
+    region: "北海道",
+    desc: "すすきのにあるママの手作り家庭料理店。ママの生年月日鑑定や、お目当ての絶品「紫艶カレー」を堪能。",
+    tags: ["紫艶カレー", "豆腐", "お通し", "マルエフ生ビール", "占い鑑定"],
+    date: "2024.02.22",
+    hotel: "ホテルリソル トリニティ札幌",
+    hotelAccess: "地下鉄南北線 大通駅3番出口より徒歩1分",
+    hotelNote: "最上階公園眺望の大浴場・アイスサービス・イル・キャンティ朝食",
+    hotelPrice: "15,000円～（1泊朝食付）",
+    lat: 43.0538,
+    lng: 141.3532
+  },
+  /* 第18回 */
+  {
+    ep: "#18",
+    name: "葉牡丹",
+    pref: "高知県",
+    city: "高知市（堺町）",
+    region: "四国",
+    desc: "郷土料理も気軽に食べられる安くて旨い老舗居酒屋。鰹たたきや酒盗茶漬けに「出汁の鰹の強さ、旨い！」と絶賛。",
+    tags: ["鰹たたき", "串フライ盛り合わせ", "くじら刺身", "酒盗茶漬け", "土佐鶴"],
+    date: "2024.02.29",
+    hotel: "高知グリーンホテルはりまや橋",
+    hotelAccess: "JR高知駅より徒歩6分",
+    hotelNote: "シンプル＆ストロングスタイル・各フロア浴衣＆選べる枕",
+    hotelPrice: "4,100円～（1泊素泊まり）",
+    lat: 33.5598,
+    lng: 133.5412
+  },
+  /* 第19回 */
+  {
+    ep: "#19",
+    name: "酒処 さかえ",
+    pref: "高知県",
+    city: "南国市（後免町）",
+    region: "四国",
+    desc: "後免町商店街近くの家族で営む老舗居酒屋。里いもからあげ、名物シャモライス、サービスしてくれたすまきのちくきゅうに舌鼓。",
+    tags: ["シャモライス", "里いもからあげ", "ブリ子煮付け", "カンパチ刺身", "すまきのちくきゅう", "桂月"],
+    date: "2024.03.07",
+    hotel: "サザンシティホテル",
+    hotelAccess: "高知龍馬空港より車で10分",
+    hotelNote: "広々42㎡広大客室・セパレートバストイレ・併設ジム＆レストラン",
+    hotelPrice: "15,500円～（1泊素泊まり）",
+    lat: 33.5782,
+    lng: 133.6475
+  },
+  /* 第20回 */
+  {
+    ep: "#20",
+    name: "牛もつ鍋おおいし",
+    pref: "福岡県",
+    city: "福岡市（住吉）",
+    region: "九州",
+    desc: "こだわりの秘伝みそを使った濃厚な牛もつ鍋を満喫。ぷりぷりの国産牛もつと締めのおじや・ちゃんぽん麺に大満足。",
+    tags: ["みそ味もつ鍋", "国産牛もつ", "ちゃんぽん麺", "芋焼酎"],
+    date: "2024.03.14",
+    hotel: "プレジデントホテル博多",
+    hotelAccess: "JR博多駅博多口より徒歩6分（無料送迎バスあり）",
+    hotelNote: "選べる貸出枕・女性限定アメニティ・博多和朝食",
+    hotelPrice: "9,000円～（1泊朝食付）",
+    lat: 33.5855,
+    lng: 130.4138
+  },
+  /* 第21回 */
+  {
+    ep: "#21",
+    name: "うるしや / もてなしや 絆",
+    pref: "福井県",
+    city: "越前市",
+    region: "中部",
+    desc: "昭和天皇も訪れた伝統の蕎麦屋「うるしや」で抹茶を練り込んだ越前そばを堪能。夜は古民居酒屋「もてなしや 絆」で甘エビ・ガマエビ刺しや炎包焼き、サービスの越前がにを味わう。",
+    tags: ["越前そば", "式部御膳", "甘エビ・ガマエビ刺し", "炎包焼き", "越前がに", "地酒"],
+    date: "2024.03.21",
+    hotel: "スーパーホテル越前・武生",
+    hotelAccess: "JR武生駅西口より徒歩5分 / 越前たけふ駅より車で11分",
+    hotelNote: "天然温泉「蓬莱山の湯」（加賀温泉の源泉）/ ウェルカムバーで地酒サービス / 選べる枕",
+    hotelPrice: "6,000円～（1泊朝食付き、1室1名様）",
+    lat: 35.9038,
+    lng: 136.1686
+  },
+  /* 第22回 */
+  {
+    ep: "#22",
+    name: "恵比寿の韓国家庭料理店",
+    pref: "東京都",
+    city: "渋谷区（恵比寿）",
+    region: "関東",
+    desc: "アメリカンな色調のビジホに少し戸惑いつつ歓楽街へ。思い出深い恵比寿の街で、春菊キムチやカムジャタン、元気マッコリを味わいほろ酔う。",
+    tags: ["韓国家庭料理", "春菊キムチ", "カムジャタン", "元気マッコリ"],
+    date: "2024.04.04",
+    hotel: "恵比寿ホリックホテル",
+    hotelAccess: "恵比寿駅より徒歩圏内",
+    hotelNote: "アメリカンな色調のインテリアが特徴的なおしゃれビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.6468,
+    lng: 139.7102
+  },
+  /* 第23回 */
+  {
+    ep: "#23",
+    name: "元祖長浜屋 / 居酒屋（長浜エリア）",
+    pref: "福岡県",
+    city: "長浜（福岡市）",
+    region: "九州",
+    desc: "焼酎一杯100円の自己申告制のお店で出来立てのカマボコとシューマイを堪能。締めは元祖長浜屋でラーメンを箸を置かずに一気にいただく。",
+    tags: ["焼酎100円", "自己申告制", "カマボコ", "シューマイ", "元祖長浜屋", "ラーメン"],
+    date: "2024.04.11",
+    hotel: "ランプライトブックスホテル福岡",
+    hotelAccess: "天神駅徒歩約8分",
+    hotelNote: "本の世界を旅するというコンセプトで部屋でゆっくり読書も楽しめるビジホ",
+    hotelPrice: "要問合せ",
+    lat: 33.5885,
+    lng: 130.3925
+  },
+  /* 第24回 */
+  {
+    ep: "#24",
+    name: "浅草の洋食店 / 地下街の居酒屋",
+    pref: "東京都",
+    city: "台東区（浅草）",
+    region: "関東",
+    desc: "洋食屋さんでナポリタンの美味しさに衝撃を受けつつ一杯。2軒目は渋い地下街のお店でグリーンカレーを頂きながらマスターと会話が弾む。",
+    tags: ["洋食屋", "ナポリタン", "地下街", "グリーンカレー"],
+    date: "2024.04.18",
+    hotel: "アパホテル〈浅草 雷門〉",
+    hotelAccess: "浅草駅徒歩約2分",
+    hotelNote: "1秒チェックイン",
+    hotelPrice: "要問合せ",
+    lat: 35.7108,
+    lng: 139.7958
+  },
+  /* 第25回 */
+  {
+    ep: "#25",
+    name: "上海料理店 / 京橋の立ち飲み処",
+    pref: "大阪府",
+    city: "大阪市（京橋）",
+    region: "近畿",
+    desc: "ママさん一人で切り盛りする上海料理店で絶品砂ずりの煮込み、麻婆豆腐、焼きそばを堪能。2軒目は立ち飲み処で店全体で乾杯！",
+    tags: ["上海料理", "砂ずりの煮込み", "麻婆豆腐", "焼きそば", "立ち飲み"],
+    date: "2024.04.25",
+    hotel: "シティホテル京橋",
+    hotelAccess: "京橋駅すぐ",
+    hotelNote: "好立地なビジネスホテル",
+    hotelPrice: "要問合せ",
+    lat: 34.6972,
+    lng: 135.5342
+  },
+  /* 第26回 */
+  {
+    ep: "#26",
+    name: "近江牛焼肉店 / 彦根のお寿司屋さん",
+    pref: "滋賀県",
+    city: "彦根市",
+    region: "近畿",
+    desc: "駅近で美味しい近江牛の絶品タンやハラミを堪能できる焼肉店で一杯。帰りに近くのお寿司屋さんで握りをお持ち帰りして部屋でいただく。",
+    tags: ["近江牛", "焼肉", "タン", "ハラミ", "寿司テイクアウト"],
+    date: "2024.05.02",
+    hotel: "ビジネスホテル近江",
+    hotelAccess: "彦根駅近く",
+    hotelNote: "ご家族で切り盛りする老舗のビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.2725,
+    lng: 136.2578
+  },
+  /* 第27回 */
+  {
+    ep: "#27",
+    name: "高円寺の沖縄料理居酒屋",
+    pref: "東京都",
+    city: "杉並区（高円寺）",
+    region: "関東",
+    desc: "ゴーヤーチャンプルーやミミガーを食べながらお酒が進む。カリフォルニアから来た女性と隣り合わせになり楽しい出会いと会話を満喫。",
+    tags: ["沖縄料理", "ゴーヤーチャンプルー", "ミミガー"],
+    date: "2024.05.09",
+    hotel: "JR東日本ホテルメッツ 高円寺",
+    hotelAccess: "高円寺駅直結",
+    hotelNote: "駅至近で利便性の高いホテル",
+    hotelPrice: "要問合せ",
+    lat: 35.7052,
+    lng: 139.6498
+  },
+  /* 第28回 */
+  {
+    ep: "#28",
+    name: "駅近老舗餃子店 / かぶと揚げのお店",
+    pref: "栃木県",
+    city: "宇都宮市",
+    region: "関東",
+    desc: "チェックイン前に駅近の老舗餃子でさっそく一杯。ビジホを満喫した後はオリオン通り周辺で手羽付き唐揚げ「かぶと揚げ」が楽しめるお店へ。",
+    tags: ["宇都宮餃子", "かぶと揚げ", "手羽付き唐揚げ"],
+    date: "2024.05.16",
+    hotel: "パークプラザ宇都宮",
+    hotelAccess: "宇都宮中心街",
+    hotelNote: "カプセル～シングルまで客室が豊富、大浴場とサウナも楽しめる",
+    hotelPrice: "要問合せ",
+    lat: 36.5612,
+    lng: 139.8835
+  },
+  /* 第29回 */
+  {
+    ep: "#29",
+    name: "水戸のあんこう鍋居酒屋",
+    pref: "茨城県",
+    city: "水戸市",
+    region: "関東",
+    desc: "歓楽街の渋めなお店が集まるエリアで、あんこう鍋が楽しめる居酒屋で一杯。久々のあのメニューも登場。",
+    tags: ["あんこう鍋", "歓楽街"],
+    date: "2024.05.23",
+    hotel: "水戸第一ホテル 本館",
+    hotelAccess: "水戸駅近く",
+    hotelNote: "家族で切り盛りされているアットホームなビジホ",
+    hotelPrice: "要問合せ",
+    lat: 36.3702,
+    lng: 140.4765
+  },
+  /* 第30回 */
+  {
+    ep: "#30",
+    name: "横丁の小料理・居酒屋（甲府）",
+    pref: "山梨県",
+    city: "甲府市",
+    region: "中部",
+    desc: "渋い横丁で素敵な女将さんのいるお店に出会い、タラの芽の天ぷらなどを頂きながら会話が弾む。",
+    tags: ["横丁", "女将さん", "タラの芽の天ぷら"],
+    date: "2024.05.30",
+    hotel: "ホテルフリースタイル",
+    hotelAccess: "甲府中心部",
+    hotelNote: "古くて狭いけど居心地の良いホテルを目指しているコスパ抜群のビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.6608,
+    lng: 138.5688
+  },
+  /* 第31回 */
+  {
+    ep: "#31",
+    name: "青葉おでん街の居酒屋",
+    pref: "静岡県",
+    city: "静岡市",
+    region: "中部",
+    desc: "昭和感漂う青葉おでん街で一杯。かなり緑色で驚く「静岡割り」とおでんを堪能。",
+    tags: ["静岡おでん", "青葉おでん街", "静岡割り"],
+    date: "2024.06.06",
+    hotel: "HOTEL ニューマスターチ",
+    hotelAccess: "静岡駅徒歩圏内",
+    hotelNote: "昭和感漂うビジホをリノベーション、大浴場を改築した図書スペースあり",
+    hotelPrice: "要問合せ",
+    lat: 34.9722,
+    lng: 138.3812
+  },
+  /* 第32回 */
+  {
+    ep: "#32",
+    name: "栄町の居酒屋（千葉市）",
+    pref: "千葉県",
+    city: "千葉市",
+    region: "関東",
+    desc: "栄町で訪れた居酒屋でたまたまあのプロレスラーさんと遭遇。驚きのあまり声をあげつつ楽しい夜を過ごす。",
+    tags: ["栄町", "居酒屋"],
+    date: "2024.06.13",
+    hotel: "HOTEL PARMAN",
+    hotelAccess: "栄町エリア",
+    hotelNote: "サウナを備えた大浴場がウリのビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.6128,
+    lng: 140.1185
+  },
+  /* 第33回 */
+  {
+    ep: "#33",
+    name: "思案橋ラーメン / おにぎりの桃太呂",
+    pref: "長崎県",
+    city: "長崎市",
+    region: "九州",
+    desc: "思案橋ラーメンで皿うどんを小皿の味変とともに楽しむ。2軒目は夜中までやっているおにぎり屋さんでいくらでも食べられるおにぎりとビール！",
+    tags: ["皿うどん", "思案橋ラーメン", "おにぎり", "味変"],
+    date: "2024.06.20",
+    hotel: "長崎バスターミナルホテル",
+    hotelAccess: "歓楽街すぐそば",
+    hotelNote: "ちくわ自販機あり",
+    hotelPrice: "要問合せ",
+    lat: 32.7428,
+    lng: 129.8752
+  },
+  /* 第34回 */
+  {
+    ep: "#34",
+    name: "鶴橋のお好み焼き・焼きそば店",
+    pref: "大阪府",
+    city: "大阪市（鶴橋）",
+    region: "近畿",
+    desc: "コリアンタウンを散策後のお好み焼き屋さん。焼きそばも一緒にいただき、炭水化物×炭水化物論争にも切り込む居心地のよい店。",
+    tags: ["お好み焼き", "焼きそば", "炭水化物×炭水化物"],
+    date: "2024.07.04",
+    hotel: "HOTEL TRAD大阪鶴橋",
+    hotelAccess: "鶴橋駅近く",
+    hotelNote: "マンションをリノベーションし全室ミニキッチン付き",
+    hotelPrice: "要問合せ",
+    lat: 34.6658,
+    lng: 135.5302
+  },
+  /* 第35回 */
+  {
+    ep: "#35",
+    name: "沖縄バーガー店 / 絶品ステーキ店",
+    pref: "沖縄県",
+    city: "豊見城市",
+    region: "九州",
+    desc: "昼食に沖縄食材のハンバーガーを味わい、夕食には飲み会の〆の定番である絶品ステーキに舌鼓。沖縄ならではの肉食文化を満喫。",
+    tags: ["ご当地ハンバーガー", "〆のステーキ", "沖縄ステーキ"],
+    date: "2024.07.11",
+    hotel: "沖縄空手ホテル",
+    hotelAccess: "豊見城エリア",
+    hotelNote: "ケンコバさんがかねてから気になっていたホテル",
+    hotelPrice: "要問合せ",
+    lat: 26.1825,
+    lng: 127.6758
+  },
+  /* 第36回 */
+  {
+    ep: "#36",
+    name: "川崎プロレス焼肉店 / 元祖ニュータンタンメン",
+    pref: "神奈川県",
+    city: "川崎市",
+    region: "関東",
+    desc: "レスラーのサインやマスクが並ぶプロレス一色の焼肉店で大興奮。2軒目は川崎のソウルフード「元祖ニュータンタンメン」で締めくくる。",
+    tags: ["プロレス焼肉", "元祖ニュータンタンメン", "川崎ソウルフード"],
+    date: "2024.07.18",
+    hotel: "東横INN川崎駅前市役所通",
+    hotelAccess: "川崎駅近く",
+    hotelNote: "日本で最も多くの客室数を誇るビジネスホテルチェーン",
+    hotelPrice: "要問合せ",
+    lat: 35.5308,
+    lng: 139.7028
+  },
+  /* 第37回 */
+  {
+    ep: "#37",
+    name: "麵闘庵 / 奈良の地酒居酒屋",
+    pref: "奈良県",
+    city: "奈良市",
+    region: "近畿",
+    desc: "大きな巾着にうどんが入った名物「巾着きつね」を堪能。夕食の居酒屋では地元の酒蔵の銘酒を飲み比べ。",
+    tags: ["巾着きつねうどん", "奈良の地酒", "飲み比べ"],
+    date: "2024.07.25",
+    hotel: "ホテルアジール・奈良",
+    hotelAccess: "JR奈良駅近く",
+    hotelNote: "奈良市観光協会マスコットキャラクターが部屋中にあしらわれた客室",
+    hotelPrice: "要問合せ",
+    lat: 34.6822,
+    lng: 135.8208
+  },
+  /* 第38回 */
+  {
+    ep: "#38",
+    name: "銀座インド料理店 / お雑煮専門店",
+    pref: "東京都",
+    city: "中央区（銀座）",
+    region: "関東",
+    desc: "インド料理の名店で看板メニューのカレーランチを堪能。〆には大好物のおもちを楽しむべくお雑煮専門店へ行き日本酒でほろ酔う。",
+    tags: ["本格カレー", "お雑煮専門店", "日本酒"],
+    date: "2024.08.01",
+    hotel: "変なホテル東京 銀座",
+    hotelAccess: "築地駅・新富町駅徒歩圏内",
+    hotelNote: "ロボットがお出迎え、VRも楽しめる",
+    hotelPrice: "要問合せ",
+    lat: 35.6708,
+    lng: 139.7712
+  },
+  /* 第39回 */
+  {
+    ep: "#39",
+    name: "新潟のおにぎり屋 / へぎそば処",
+    pref: "新潟県",
+    city: "新潟市",
+    region: "甲信越",
+    desc: "目の前でおにぎりを握ってくれるお店で新潟のお米と地酒を満喫。〆には郷土料理へぎそばを堪能。",
+    tags: ["にいがた米おにぎり", "へぎそば", "新潟の地酒"],
+    date: "2024.08.08",
+    hotel: "ホテルグローバルビュー新潟",
+    hotelAccess: "新潟駅から徒歩約1分",
+    hotelNote: "大浴場でたらい船をイメージした桶風呂あり",
+    hotelPrice: "要問合せ",
+    lat: 37.9135,
+    lng: 139.0608
+  },
+  /* 第40回 */
+  {
+    ep: "#40",
+    name: "沼津の老舗寿司店",
+    pref: "静岡県",
+    city: "沼津市",
+    region: "中部",
+    desc: "キン肉マンミュージアムを楽しんだ後、日本中の港から産直で仕入れたこだわりの魚を堪能する老舗寿司店で一杯。",
+    tags: ["沼津港直送", "老舗寿司", "キン肉マンミュージアム"],
+    date: "2024.08.15",
+    hotel: "ホテルアリア",
+    hotelAccess: "沼津駅から徒歩3分",
+    hotelNote: "洗練された客室が自慢のホテル",
+    hotelPrice: "要問合せ",
+    lat: 35.1018,
+    lng: 138.8588
+  },
+  /* 第41回 */
+  {
+    ep: "#41",
+    name: "高崎の老舗大衆酒場",
+    pref: "群馬県",
+    city: "高崎市",
+    region: "関東",
+    desc: "地元の人に愛され続ける老舗酒場で大好物のイカ・ちくわをつまみにほろ酔う。",
+    tags: ["老舗大衆酒場", "イカ", "ちくわ"],
+    date: "2024.08.22",
+    hotel: "ココグラン高崎",
+    hotelAccess: "高崎駅直結",
+    hotelNote: "プールやジャグジー付きプレミアムルーム、サウナ付き大浴場",
+    hotelPrice: "要問合せ",
+    lat: 36.3218,
+    lng: 139.0135
+  },
+  /* 第42回 */
+  {
+    ep: "#42",
+    name: "大井町の精肉角打ち / プロレスラー御用達居酒屋",
+    pref: "東京都",
+    city: "品川区（大井町）",
+    region: "関東",
+    desc: "精肉店のような立ち飲み屋さんで一杯。夜はプロレスラーなどのスポーツ選手が通う居酒屋で絶品の名物餃子を堪能。",
+    tags: ["角打ち", "精肉店立ち飲み", "名物餃子", "プロレスラー御用達"],
+    date: "2024.08.29",
+    hotel: "ヴィアイン品川大井町",
+    hotelAccess: "大井町駅徒歩2分",
+    hotelNote: "駅近で利便性に優れるビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.6062,
+    lng: 139.7345
+  },
+  /* 第43回 */
+  {
+    ep: "#43",
+    name: "自由が丘のレトロ洋食店 / 立ち飲み処",
+    pref: "東京都",
+    city: "目黒区（自由が丘）",
+    region: "関東",
+    desc: "渋すぎる洋食店でスパゲッティとワインを楽しんだ後、立ち飲み屋へ。ひな鳥の半身素揚げでほろ酔う。",
+    tags: ["レトロ洋食", "スパゲッティ", "ひな鳥半身素揚げ", "立ち飲み"],
+    date: "2024.09.05",
+    hotel: "ホテルピュリッツァー 自由が丘",
+    hotelAccess: "自由が丘駅徒歩2分",
+    hotelNote: "自由が丘っぽさ満載のメルヘンホテル",
+    hotelPrice: "要問合せ",
+    lat: 35.6082,
+    lng: 139.6688
+  },
+  /* 第44回 */
+  {
+    ep: "#44",
+    name: "松戸の大衆酒場 / ジビエバー",
+    pref: "千葉県",
+    city: "松戸市",
+    region: "関東",
+    desc: "地元民に愛される大衆酒場でもつ焼きとサワーを堪能。〆はタップスターの資格を持つ注ぎ手がいるジビエバーへ。",
+    tags: ["大衆酒場", "もつ焼き", "ジビエバー", "タップスタービール"],
+    date: "2024.09.12",
+    hotel: "ビジネスホテルチェックイン",
+    hotelAccess: "松戸駅近く",
+    hotelNote: "寝室・仕事スペースが分かれたコスパ抜群のお部屋があるレトロ系ビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.7835,
+    lng: 139.9008
+  },
+  /* 第45回 */
+  {
+    ep: "#45",
+    name: "西川口の本格中国東北料理店",
+    pref: "埼玉県",
+    city: "川口市（西川口）",
+    region: "関東",
+    desc: "中国東北地方の本格的な家庭料理店。店員さんに目の前で鍋を作ってもらいつつハルビンビールで一杯。",
+    tags: ["中国東北料理", "ハルビンビール", "本格中華鍋"],
+    date: "2024.09.19",
+    hotel: "COCO STAY 西川口駅前",
+    hotelAccess: "西川口駅徒歩2分",
+    hotelNote: "銀行の寮をリノベーションしたビジホ、大浴場あり",
+    hotelPrice: "要問合せ",
+    lat: 35.8152,
+    lng: 139.7058
+  },
+  /* 第46回 */
+  {
+    ep: "#46",
+    name: "五所川原の小料理屋",
+    pref: "青森県",
+    city: "五所川原市",
+    region: "東北",
+    desc: "吉幾三コレクションミュージアムを見学後、津軽弁の女将が切り盛りする小料理屋のおまかせコースで一杯。",
+    tags: ["吉幾三ミュージアム", "津軽弁の女将", "小料理屋", "おまかせコース"],
+    date: "2024.10.03",
+    hotel: "ホテルサンルート五所川原",
+    hotelAccess: "五所川原駅徒歩3分",
+    hotelNote: "入り口に立佞武多、大浴場あり",
+    hotelPrice: "要問合せ",
+    lat: 40.8102,
+    lng: 140.4468
+  },
+  /* 第47回 */
+  {
+    ep: "#47",
+    name: "弘前・津軽三味線居酒屋 / ホテル客室",
+    pref: "青森県",
+    city: "弘前市",
+    region: "東北",
+    desc: "津軽三味線の生演奏を楽しめる居酒屋で郷土料理と地酒を満喫。締めは元々スナックだったホテルの部屋で一杯やります。",
+    tags: ["津軽三味線生演奏", "郷土料理", "青森の地酒", "旧スナック客室"],
+    date: "2024.10.10",
+    hotel: "GOOD OLD HOTEL",
+    hotelAccess: "鍛冶町エリア",
+    hotelNote: "スナック・飲食店をリノベーションした非対面型の無人ホテル",
+    hotelPrice: "要問合せ",
+    lat: 40.6012,
+    lng: 140.4722
+  },
+  /* 第48回 */
+  {
+    ep: "#48",
+    name: "天草海鮮居酒屋 / 熊本ラーメン店",
+    pref: "熊本県",
+    city: "熊本市",
+    region: "九州",
+    desc: "天草で獲れた海の幸が頂ける海鮮料理のお店で一杯。〆には昔ながらの熊本ラーメン店に行きほろ酔う。",
+    tags: ["天草海鮮", "熊本ラーメン"],
+    date: "2024.10.17",
+    hotel: "アンドコンフィホテル熊本城ビュー",
+    hotelAccess: "上通・下通周辺",
+    hotelNote: "熊本城が一望できる屋上テラスあり",
+    hotelPrice: "要問合せ",
+    lat: 32.8028,
+    lng: 130.7088
+  },
+  /* 第49回 */
+  {
+    ep: "#49",
+    name: "熊本ケンコバ行きつけ馬肉専門店",
+    pref: "熊本県",
+    city: "熊本市",
+    region: "九州",
+    desc: "大浴場のあとに無料アイスを堪能し、夕飯はケンコバさん行きつけの馬肉専門店へ。新鮮な馬肉とビールで一杯。",
+    tags: ["馬肉専門店", "馬刺し", "熊本名物"],
+    date: "2024.10.24",
+    hotel: "熊本ワシントンホテルプラザ",
+    hotelAccess: "ワシントン通り",
+    hotelNote: "広々大浴場、無料アイスサービスあり",
+    hotelPrice: "要問合せ",
+    lat: 32.7982,
+    lng: 130.7062
+  },
+  /* 第50回 */
+  {
+    ep: "#50",
+    name: "穴守稲荷の大衆居酒屋",
+    pref: "東京都",
+    city: "大田区（羽田）",
+    region: "関東",
+    desc: "羽田空港周辺の穴守稲荷を散策。地元の常連さんで賑わう大衆居酒屋で新鮮な旬の魚介料理を堪能。",
+    tags: ["穴守稲荷", "旬の魚介料理", "大衆居酒屋"],
+    date: "2024.10.31",
+    hotel: "ホテルJALシティ羽田 東京 ウエスト ウイング",
+    hotelAccess: "空港までシャトルバスで最短10分",
+    hotelNote: "夜景が描かれた客室",
+    hotelPrice: "要問合せ",
+    lat: 35.5488,
+    lng: 139.7428
+  },
+  /* 第51回 */
+  {
+    ep: "#51",
+    name: "北千住の大衆酒場（ゲスト：銀シャリ橋本）",
+    pref: "東京都",
+    city: "足立区（北千住）",
+    region: "関東",
+    desc: "銀シャリ橋本さんと一緒に北千住へ。連日賑わう大衆酒場でもつ焼きと生ホッピーで一杯やります。",
+    tags: ["銀シャリ橋本", "もつ焼き", "生ホッピー", "大衆酒場"],
+    date: "2024.11.07",
+    hotel: "アーバイン東京・上野 北千住",
+    hotelAccess: "北千住駅徒歩約3分",
+    hotelNote: "正統派ビジホ・ツインルーム",
+    hotelPrice: "要問合せ",
+    lat: 35.7492,
+    lng: 139.8052
+  },
+  /* 第52回 */
+  {
+    ep: "#52",
+    name: "布施の鮮魚居酒屋",
+    pref: "大阪府",
+    city: "東大阪市（布施）",
+    region: "近畿",
+    desc: "昭和レトロな商店街の街並みを楽しみつつ、毎朝市場で仕入れを行っている居酒屋へ。てっちりとふぐひれ酒で一杯やります。",
+    tags: ["てっちり", "ふぐひれ酒", "市場直送鮮魚"],
+    date: "2024.11.14",
+    hotel: "SEKAI HOTEL Fuse",
+    hotelAccess: "布施駅商店街内",
+    hotelNote: "昭和レトロな商店街の空き家をリノベした分散型ホテル",
+    hotelPrice: "要問合せ",
+    lat: 34.6632,
+    lng: 135.5642
+  },
+  /* 第53回 */
+  {
+    ep: "#53",
+    name: "町田のコの字カウンター酒場",
+    pref: "東京都",
+    city: "町田市",
+    region: "関東",
+    desc: "カウンターにズラリと並べられた大皿料理がインパクト大のお店。フジツボの酒蒸しで一杯やります。",
+    tags: ["コの字カウンター", "大皿料理", "フジツボの酒蒸し"],
+    date: "2024.11.21",
+    hotel: "ホテル新宿屋",
+    hotelAccess: "町田駅徒歩1分",
+    hotelNote: "かつて旅館として営業していた老舗ホテル",
+    hotelPrice: "要問合せ",
+    lat: 35.5432,
+    lng: 139.4445
+  },
+  /* 第54回 */
+  {
+    ep: "#54",
+    name: "足利の足利名物居酒屋",
+    pref: "栃木県",
+    city: "足利市",
+    region: "関東",
+    desc: "コンテナ型ホテルを満喫した後は、気さくなママが営むお店へ。足利名物のヤキソパスタで一杯。",
+    tags: ["ヤキソパスタ", "足利名物", "名物ママ"],
+    date: "2024.11.28",
+    hotel: "HOTEL R9 The Yard 足利駅西",
+    hotelAccess: "JR足利駅徒歩圏内",
+    hotelNote: "コンテナ型の一風変わったスタイリッシュビジホ",
+    hotelPrice: "要問合せ",
+    lat: 36.3348,
+    lng: 139.4488
+  },
+  /* 第55回 */
+  {
+    ep: "#55",
+    name: "宮崎の釜揚げうどん店 / 宮崎郷土料理居酒屋",
+    pref: "宮崎県",
+    city: "宮崎市",
+    region: "九州",
+    desc: "お昼に自家製手打ち麺の釜揚げうどんを堪能。サウナ後には宮崎の本格郷土料理と爽やかな本格焼酎で一杯。",
+    tags: ["釜揚げうどん", "宮崎郷土料理", "本格焼酎"],
+    date: "2024.12.05",
+    hotel: "ホテル マリックスラグーン",
+    hotelAccess: "宮崎中心街徒歩圏内",
+    hotelNote: "大浴場と本格サウナが楽しめるホテル",
+    hotelPrice: "要問合せ",
+    lat: 31.9182,
+    lng: 131.4208
+  },
+  /* 第56回 */
+  {
+    ep: "#56",
+    name: "門前仲町のクジラ料理店 / おでん居酒屋",
+    pref: "東京都",
+    city: "江東区（門前仲町）",
+    region: "関東",
+    desc: "番組初の女性ゲスト・ヒコロヒーと辰巳新道近くをはしご酒。一軒目でクジラ刺などを味わい、2軒目はおでん盛りと熱燗で一杯。",
+    tags: ["ヒコロヒー", "辰巳新道", "クジラ刺", "おでん盛り", "熱燗"],
+    date: "2024.12.19",
+    hotel: "東急ステイ門前仲町",
+    hotelAccess: "門前仲町駅徒歩1分",
+    hotelNote: "洗濯乾燥機・電子レンジ等を完備した快適ビジホ",
+    hotelPrice: "要問合せ",
+    lat: 35.6722,
+    lng: 139.7965
+  },
+  /* 大晦日SP */
+  {
+    ep: "大晦日SP",
+    name: "二条市場ラーメン店 / はちきょう等（つっこ飯の大衆酒場）",
+    pref: "北海道",
+    city: "札幌市",
+    region: "北海道",
+    desc: "二条市場しょうゆラーメンを堪能。大浴場・サウナの後はイクラを大量に丼につっこむ名物「つっこ飯」と北海道の地酒で豪快に忘年会！",
+    tags: ["二条市場ラーメン", "つっこ飯", "イクラ溢れ盛り", "北海道地酒"],
+    date: "2024.12.31",
+    hotel: "ホテルハシモト",
+    hotelAccess: "",
+    hotelNote: "昔ながらの和室客室、銭湯のような大浴場＆サウナ完備",
+    hotelPrice: "",
+    lat: 43.0601,
+    lng: 141.3575
+  },
+  /* 第57回 */
+  {
+    ep: "#57",
+    name: "横須賀の鮮魚捌き居酒屋",
+    pref: "神奈川県",
+    city: "横須賀市",
+    region: "関東",
+    desc: "新鮮なお魚をその場で捌いて出してくれるお店へ。名物「横須賀ブラジャー」（ブランデー×ジンジャーエール）とさしみ盛合わせで乾杯。",
+    tags: ["横須賀ブラジャー", "さしみ盛合わせ", "板前手さばき"],
+    date: "2025.01.09",
+    hotel: "ホテルパレス",
+    hotelAccess: "",
+    hotelNote: "昭和風情の残るレトロなビジホ、和室あり",
+    hotelPrice: "",
+    lat: 35.2818,
+    lng: 139.6722
+  },
+  /* 第58回 */
+  {
+    ep: "#58",
+    name: "十三のキャッシュオン居酒屋",
+    pref: "大阪府",
+    city: "十三（大阪市）",
+    region: "近畿",
+    desc: "露天壺湯で温まった後、キャッシュオンデリバリー制度の居酒屋へ。焼酎のお湯割りとあつあつのおつまみで一杯やります。",
+    tags: ["キャッシュオンデリバリー", "焼酎お湯割り", "あつあつまみ"],
+    date: "2025.01.16",
+    hotel: "アスティルホテル十三 プレシャス",
+    hotelAccess: "十三駅周辺",
+    hotelNote: "2020年完成、大浴場でサウナや露天壺湯を満喫できる",
+    hotelPrice: "",
+    lat: 34.7208,
+    lng: 135.4828
+  },
+  /* 第59回 */
+  {
+    ep: "#59",
+    name: "日向の夫婦居酒屋",
+    pref: "宮崎県",
+    city: "日向市",
+    region: "九州",
+    desc: "スナックビルの多さに驚きつつも夫婦で営む落ち着きのある居酒屋へ。ぽてちくいそべ揚と爽やかな芋焼酎で一杯。",
+    tags: ["ぽてちくいそべ揚", "芋焼酎", "スナック街"],
+    date: "2025.01.23",
+    hotel: "ホテルメリッサ日向",
+    hotelAccess: "駅から徒歩すぐ",
+    hotelNote: "",
+    hotelPrice: "",
+    lat: 32.4222,
+    lng: 131.6248
+  },
+  /* 第60回 */
+  {
+    ep: "#60",
+    name: "赤羽のアットホーム居酒屋",
+    pref: "東京都",
+    city: "赤羽",
+    region: "関東",
+    desc: "客室からトレインビューを満喫。200品以上の豊富なメニューが自慢の家族経営店で、視聴者からお薦めされたちくわ磯辺揚げを満喫。",
+    tags: ["ちくわ磯辺揚げ", "豊富なメニュー", "家族経営"],
+    date: "2025.01.30",
+    hotel: "ホテルウィングインターナショナル東京赤羽",
+    hotelAccess: "",
+    hotelNote: "レトロモダンな雰囲気、トレインビュー客室あり",
+    hotelPrice: "",
+    lat: 35.7792,
+    lng: 139.7218
+  },
+  /* 第61回 */
+  {
+    ep: "#61",
+    name: "狸小路の珍味酒場（横浜）",
+    pref: "神奈川県",
+    city: "横浜市",
+    region: "関東",
+    desc: "昭和の雰囲気が色濃く残る飲み屋街「狸小路」へ。珍しい豚の珍味と、やかんでドバドバ提供される焼酎で一杯。",
+    tags: ["狸小路", "豚珍味", "やかん焼酎", "昭和ディープ"],
+    date: "2025.02.06",
+    hotel: "相鉄フレッサイン 横浜駅東口",
+    hotelAccess: "横浜駅より徒歩2分",
+    hotelNote: "アクセス抜群のビジホ",
+    hotelPrice: "",
+    lat: 35.4658,
+    lng: 139.6238
+  },
+  /* 第62回 */
+  {
+    ep: "#62",
+    name: "豊橋のおでん屋 / 豊橋カレーうどん店",
+    pref: "愛知県",
+    city: "豊橋市",
+    region: "中部",
+    desc: "ちくわ焼き検定も体験できるおでん屋さんで一杯。〆には二層構造が特徴の豊橋カレーうどんを食す。",
+    tags: ["豊橋おでん", "ちくわ焼き検定", "豊橋カレーうどん"],
+    date: "2025.02.13",
+    hotel: "ニュー東洋ホテル２",
+    hotelAccess: "",
+    hotelNote: "古き良きビジホ、大浴場あり",
+    hotelPrice: "",
+    lat: 34.7628,
+    lng: 137.3828
+  },
+  /* 第63回 */
+  {
+    ep: "#63",
+    name: "岡崎のスタンドかっぽう居酒屋",
+    pref: "愛知県",
+    city: "岡崎市",
+    region: "中部",
+    desc: "東海オンエアてつやさんプロデュースのホテルに宿泊。気軽に本格的な割烹料理や季節料理が楽しめるお店で熱燗と味わう。",
+    tags: ["スタンドかっぽう", "割烹料理", "熱燗", "東海オンエア"],
+    date: "2025.02.20",
+    hotel: "ほてる小栁津",
+    hotelAccess: "",
+    hotelNote: "東海オンエアてつやさんプロデュース、特別仕様の客室",
+    hotelPrice: "",
+    lat: 34.9568,
+    lng: 137.1588
+  },
+  /* 第64回 */
+  {
+    ep: "#64",
+    name: "国分の揚げたてさつまあげ店 / さつま居酒屋",
+    pref: "鹿児島県",
+    city: "霧島市（国分）",
+    region: "九州",
+    desc: "立ち寄り店舗で揚げたてのさつま揚げを食す。ご夫婦で営むさつま居酒屋で名物「びんた焼き」（マグロ頭部焼き）と鹿児島の地酒を満喫。",
+    tags: ["揚げたてさつまあげ", "びんた焼き", "鹿児島地酒", "芋焼酎"],
+    date: "2025.02.27",
+    hotel: "アーバンホテル国分",
+    hotelAccess: "",
+    hotelNote: "チャーハン専門店を併設する珍しいビジホ",
+    hotelPrice: "",
+    lat: 31.7438,
+    lng: 130.7688
+  },
+  /* 第65回 */
+  {
+    ep: "#65",
+    name: "ホテルニューニシノ 湯上がり食堂 / 鹿児島郷土料理店",
+    pref: "鹿児島県",
+    city: "鹿児島市",
+    region: "九州",
+    desc: "大正初期創業の老舗で温泉・サウナ後に湯上がり食堂を満喫。アットホームな郷土料理店で本場の「黒豚しゃぶしゃぶ」と地酒に酔いしれる。",
+    tags: ["黒豚しゃぶしゃぶ", "温泉サウナ", "湯上がり食堂", "鹿児島郷土料理"],
+    date: "2025.03.06",
+    hotel: "ホテルニューニシノ",
+    hotelAccess: "",
+    hotelNote: "大正初期創業の老舗、天然温泉とサウナ完備",
+    hotelPrice: "",
+    lat: 31.5908,
+    lng: 130.5548
+  },
+  /* 第66回 */
+  {
+    ep: "#66",
+    name: "阪神西宮の角打ち酒場 / 西宮人気居酒屋",
+    pref: "兵庫県",
+    city: "西宮市",
+    region: "近畿",
+    desc: "甲子園球場目の前のビジホを満喫後、角打ち酒場と人気居酒屋をハシゴ。絶品の「キズシ」（しめ鯖）と熱燗で一杯。",
+    tags: ["角打ち", "キズシ", "熱燗", "甲子園球場"],
+    date: "2025.03.13",
+    hotel: "甲子園ホテル夕立荘",
+    hotelAccess: "阪神甲子園球場目の前",
+    hotelNote: "長年高校球児を受け入れるビジホ、和室とお風呂あり",
+    hotelPrice: "",
+    lat: 34.7218,
+    lng: 135.3628
+  },
+  /* 第67回 */
+  {
+    ep: "#67",
+    name: "八王子の老舗家族経営居酒屋",
+    pref: "東京都",
+    city: "八王子市",
+    region: "関東",
+    desc: "1946年創業の歴史あるホテルを探索後、長く愛される居酒屋へ。名物「ボンゴレうどん」とドラゴンハイボールで一杯やります。",
+    tags: ["ボンゴレうどん", "ドラゴンハイボール", "家族経営老舗"],
+    date: "2025.03.20",
+    hotel: "千代田ホテル",
+    hotelAccess: "駅から徒歩2分",
+    hotelNote: "1946年頃創業のレトロ・ノスタルジックなビジホ",
+    hotelPrice: "",
+    lat: 35.6558,
+    lng: 139.3388
+  },
+  /* 第68回 */
+  {
+    ep: "#68",
+    name: "大正の老舗くわ焼き屋（ゲスト：アキナ山名）",
+    pref: "大阪府",
+    city: "大正（大阪市）",
+    region: "近畿",
+    desc: "後輩芸人のアキナ山名さんと一緒に大正へ。大浴場で温まった後は老舗くわ焼き屋へ。ケンコバの嘘か本当かわからない話とともに一杯。",
+    tags: ["アキナ山名", "くわ焼き", "大阪大正"],
+    date: "2025.04.03",
+    hotel: "ホテルソビアル大阪ドーム前",
+    hotelAccess: "大正駅近く",
+    hotelNote: "露天風呂付きの大浴場完備",
+    hotelPrice: "",
+    lat: 34.6658,
+    lng: 135.4788
+  },
+  /* 第69回 */
+  {
+    ep: "#69",
+    name: "新橋の九州郷土料理店 / 川尻哲郎さんのスポーツバー",
+    pref: "東京都",
+    city: "新橋",
+    region: "関東",
+    desc: "全国の高校の寄せ書きがある九州料理店で母校へ想いを馳せる。2軒目は元プロ野球選手・川尻哲郎さんの店で「コウネ」（広島牛の肩バラ肉）とハイボール！",
+    tags: ["寄せ書きノート", "元プロ野球選手の店", "コウネ", "スポーツバー"],
+    date: "2025.04.10",
+    hotel: "the b 新橋",
+    hotelAccess: "烏森口より徒歩6分",
+    hotelNote: "飲み歩きに好立地なスタイリッシュホテル",
+    hotelPrice: "",
+    lat: 35.6668,
+    lng: 139.7548
+  },
+  /* 第70回 */
+  {
+    ep: "#70",
+    name: "浦和の人気立ち飲み屋 / ブリティッシュパブ",
+    pref: "埼玉県",
+    city: "浦和（さいたま市）",
+    region: "関東",
+    desc: "人気の立ち飲み屋で活気ある雰囲気を楽しんだ後、静かなブリティッシュパブへ。ママ手作りの特製カレーとビールでほろ酔う。",
+    tags: ["立ち飲み", "ブリティッシュパブ", "手作りカレー", "ビール"],
+    date: "2025.04.17",
+    hotel: "浦和ワシントンホテル",
+    hotelAccess: "",
+    hotelNote: "2025年夏をもって営業終了となる老舗ビジホ",
+    hotelPrice: "",
+    lat: 35.8598,
+    lng: 139.6568
+  },
+  /* 第71回 */
+  {
+    ep: "#71",
+    name: "うな達",
+    pref: "東京都",
+    city: "池袋",
+    region: "関東",
+    desc: "昭和の趣たっぷりな家族経営の老舗居酒屋。格安なうなぎの串焼とホッピーで一杯やり、焼きそばで締める。",
+    tags: ["うな串セット", "とり串セット", "ホッピー", "あじ刺身", "焼きそば"],
+    date: "2025.04.24",
+    hotel: "天然温泉 豊穣の湯 ドーミーイン池袋",
+    hotelAccess: "池袋駅エリア",
+    hotelNote: "大浴場（サウナ・黒湯）完備の充実サービスビジホ",
+    hotelPrice: "18,500円",
+    lat: 35.7315,
+    lng: 139.7153
+  },
+  /* 第72回 */
+  {
+    ep: "#72",
+    name: "元祖セルフうどんの店 竹清 / 讃岐食酒工房 ふるさと",
+    pref: "香川県",
+    city: "高松市",
+    region: "四国",
+    desc: "「竹清」でうどんとちくわ天を楽しんだ後、「ふるさと」でカリッとジューシーな讃岐コーチン骨付鳥や瀬戸内の地魚を日本酒で満喫。",
+    tags: ["讃岐うどん", "ちくわ天", "お刺身", "骨付鳥", "かつお塩タタキ", "川鶴"],
+    date: "2025.05.01",
+    hotel: "ホテル川六 エルステージ 高松",
+    hotelAccess: "繁華街のど真ん中",
+    hotelNote: "露天風呂・サウナ完備（BGM：イミテーション・ゴールド）",
+    hotelPrice: "8,700円",
+    lat: 34.3425,
+    lng: 134.0515
+  },
+  /* 第73回 */
+  {
+    ep: "#73",
+    name: "君寿司",
+    pref: "千葉県",
+    city: "木更津市",
+    region: "関東",
+    desc: "木更津港近くの地魚が自慢の寿司店。老舗銭湯でひと風呂浴びた後、地魚のにぎりとヒレ酒でほろ酔いに。",
+    tags: ["地魚にぎり", "ヒレ酒", "あさり串焼", "なめろうフライ"],
+    date: "2025.05.08",
+    hotel: "ホテル銀河",
+    hotelAccess: "木更津港エリア",
+    hotelNote: "宿泊と釣りが一緒に楽しめるプランもあるビジホ。",
+    hotelPrice: "7,000円～（1泊、1室1名様あたり）",
+    lat: 35.3672,
+    lng: 139.9155
+  },
+  /* 第74回 */
+  {
+    ep: "#74",
+    name: "おでん三吉",
+    pref: "宮城県",
+    city: "仙台市",
+    region: "東北",
+    desc: "昭和24年創業、親子代々続く老舗おでん屋。牛たんや三角油揚げなど仙台の名物とともに一杯。",
+    tags: ["牛たん焼", "三角油揚げ", "いいだこ", "一ノ蔵 純米酒"],
+    date: "2025.05.15",
+    hotel: "ホテルプレミアムグリーンソブリン",
+    hotelAccess: "JR仙台駅より車で約6分",
+    hotelNote: "大浴場のサウナで整えるエレガントな雰囲気のビジホ。",
+    hotelPrice: "8,300円（1泊、1室1名様あたり）",
+    lat: 38.2682,
+    lng: 140.8694
+  },
+  /* 第75回 */
+  {
+    ep: "#75",
+    name: "貝料理専門 はまぐり",
+    pref: "東京都",
+    city: "新宿区（新宿三丁目）",
+    region: "関東",
+    desc: "各地の貝を使った創作料理が楽しめる居酒屋。とり貝やはまぐり、小柱揚げギョーザなど貝づくしで一杯。",
+    tags: ["刺身 はまぐり", "北寄貝ウニ焼", "小柱揚げギョーザ", "貝飯"],
+    date: "2025.05.22",
+    hotel: "東京ビジネスホテル",
+    hotelAccess: "新宿三丁目駅より徒歩10分",
+    hotelNote: "昭和から続く老舗ビジホ。大浴場には富士山の絵が。",
+    hotelPrice: "4,900円（1泊、バス・トイレ共用）",
+    lat: 35.6928,
+    lng: 139.7038
+  },
+  /* 第76回 */
+  {
+    ep: "#76",
+    name: "ビールスタンド重富 銀山町本店",
+    pref: "広島県",
+    city: "広島市",
+    region: "中国",
+    desc: "メニューはビールのみという専門店。注ぎ方にこだわった一杯を、マスターの指南のもと味わい尽くす。",
+    tags: ["一度つぎ", "二度つぎ"],
+    date: "2025.05.29",
+    hotel: "広島インテリジェントホテル スタジアム前",
+    hotelAccess: "マツダスタジアム至近",
+    hotelNote: "カープ仕様の客室が話題のビジホ。",
+    hotelPrice: "9,100円（1泊朝食付き、1室1名様あたり）",
+    lat: 34.3966,
+    lng: 132.4845
+  },
+  {
+    ep: "#76",
+    name: "がんすけ",
+    pref: "広島県",
+    city: "広島市",
+    region: "中国",
+    desc: "広島ならではの鉄板料理が楽しめるお好み焼き店。牡蠣トッピングのお好み焼きとハイボールでほろ酔いに。",
+    tags: ["お好み焼き", "牡蠣トッピング", "イカ天", "ハイボール"],
+    date: "2025.05.29",
+    hotel: "広島インテリジェントホテル スタジアム前",
+    hotelAccess: "マツダスタジアム至近",
+    hotelNote: "カープ仕様の客室が話題のビジホ。",
+    hotelPrice: "9,100円（1泊朝食付き、1室1名様あたり）",
+    lat: 34.3902,
+    lng: 132.478
+  },
+  /* 第77回 */
+  {
+    ep: "#77",
+    name: "大衆割烹 和田屋",
+    pref: "東京都",
+    city: "杉並区（阿佐ヶ谷）",
+    region: "関東",
+    desc: "親子二代で切り盛りするカウンターにおばんざいが並ぶ大衆居酒屋。新島のくさやと焼酎でほろ酔いに。",
+    tags: ["新島クサヤ", "やきとん五本盛り", "牛もつ煮込み", "黒霧島"],
+    date: "2025.06.05",
+    hotel: "ホテルルートイン東京阿佐ヶ谷",
+    hotelAccess: "南阿佐ヶ谷駅より徒歩2分",
+    hotelNote: "杉並区が一望できるビュー付きの客室が魅力。",
+    hotelPrice: "10,000円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.7048,
+    lng: 139.6363
+  },
+  /* 第78回 */
+  {
+    ep: "#78",
+    name: "バナナ食堂 立川店",
+    pref: "東京都",
+    city: "立川市",
+    region: "関東",
+    desc: "タイのクラフトビールと本格タイ料理が味わえる一軒。ソフトシェルクラブのイエローカレー炒めで〆。",
+    tags: ["シンハービール", "トムヤムクン", "ソフトシェルクラブのイエローカレー炒め"],
+    date: "2025.06.12",
+    hotel: "ビジネスホテル小沢屋",
+    hotelAccess: "JR立川駅南口より徒歩2分",
+    hotelNote: "重たい布団がケンコバ好みの和室タイプの客室。",
+    hotelPrice: "6,900円（1泊素泊まり、1室1名様あたり）",
+    lat: 35.6938,
+    lng: 139.4137
+  },
+  /* 第79回 */
+  {
+    ep: "#79",
+    name: "さいたま屋",
+    pref: "群馬県",
+    city: "草津温泉",
+    region: "関東",
+    desc: "地元の方に愛されるアットホームな居酒屋。ゴロっとしたじゃがいも入りの特製角煮の肉じゃがで一杯。",
+    tags: ["特製角煮の肉じゃが", "上州名物もつ煮込み", "豚串5種盛り"],
+    date: "2025.06.19",
+    hotel: "ビジネスホテル アゼリア",
+    hotelAccess: "草津温泉街",
+    hotelNote: "源泉かけ流しの天然温泉と酸素ボックスが自慢のビジホ。",
+    hotelPrice: "8,500円（1泊素泊まりアメニティ付き、1室1名様あたり）",
+    lat: 36.6205,
+    lng: 138.5958
+  },
+  /* 第80回 */
+  {
+    ep: "#80",
+    name: "上野れんこん",
+    pref: "東京都",
+    city: "台東区（上野）",
+    region: "関東",
+    desc: "1998年創業、店名通り「れんこん料理」専門の居酒屋。れんこんと海老のはさみ揚げなど尽くしで一杯。",
+    tags: ["れんこんと海老のはさみ揚げ", "れんこんコロッケ", "れんこん茶のモスコミュール風"],
+    date: "2025.06.26",
+    hotel: "ホテル丸谷",
+    hotelAccess: "上野駅広小路口より徒歩3分",
+    hotelNote: "1950年創業、旅館業から始まった長年愛されるビジホ。ゲストに蛍原徹さんを迎えた回。",
+    hotelPrice: "16,800円（1泊素泊まり、1室2名様あたり）",
+    lat: 35.7141,
+    lng: 139.7774
+  },
+  /* 第81回 */
+  {
+    ep: "#81",
+    name: "石田屋",
+    pref: "愛知県",
+    city: "名古屋市（金山）",
+    region: "中部",
+    desc: "名古屋のとんやきの聖地として地元の常連に長年愛されるお店。子袋と日本酒でほろ酔いに。",
+    tags: ["とんやき", "さがり並", "味噌おでん", "茹で子袋"],
+    date: "2025.07.03",
+    hotel: "割烹・ホテル いろは",
+    hotelAccess: "金山駅より徒歩10分",
+    hotelNote: "創業1974年、宴会場・会議室も備える多目的ビジホ。",
+    hotelPrice: "6,000円（1泊素泊まり、1室1名様あたり）",
+    lat: 35.1435,
+    lng: 136.9007
+  },
+  /* 第82回 */
+  {
+    ep: "#82",
+    name: "あさひ食堂",
+    pref: "三重県",
+    city: "四日市市",
+    region: "近畿",
+    desc: "昼から一杯やれる大衆盛場として地元でも人気のお店。とんてきと地酒でほろ酔いに。",
+    tags: ["肩ロースとんてき", "マグロ", "赤ウインナー"],
+    date: "2025.07.10",
+    hotel: "ホテルエコノ四日市",
+    hotelAccess: "近鉄四日市駅より徒歩4分",
+    hotelNote: "地元銭湯「玉の湯」の150℃サウナで整えてから訪問。",
+    hotelPrice: "5,500円（1泊朝食付き、1室1名様あたり）",
+    lat: 34.9654,
+    lng: 136.6244
+  },
+  /* 第83回 */
+  {
+    ep: "#83",
+    name: "大衆酒場 季節料理 はな村",
+    pref: "長野県",
+    city: "長野市",
+    region: "甲信越",
+    desc: "店主が採ってきた新鮮な山菜を使った料理が自慢のお店。根曲竹の子焼きと生ビールでほろ酔いに。",
+    tags: ["根曲竹の子焼き", "山菜天ぷら", "淡竹とニシンの煮物"],
+    date: "2025.07.17",
+    hotel: "長野第一ホテル",
+    hotelAccess: "長野駅より徒歩2分",
+    hotelNote: "創業1978年。翌朝は9階の展望風呂・露天風呂も楽しめる。",
+    hotelPrice: "7,300円（1泊朝食無料、1室1名様あたり）",
+    lat: 36.6486,
+    lng: 138.1947
+  },
+  /* 第84回 */
+  {
+    ep: "#84",
+    name: "ヨッシーズ茅場町",
+    pref: "東京都",
+    city: "中央区（茅場町）",
+    region: "関東",
+    desc: "銀座ライオンで働いていた夫婦が営むサッポロビール推しの大衆ビヤホール。目の前で注がれる生ビールで乾杯。",
+    tags: ["サッポロ生ビール黒ラベル", "自家製ポテトサラダ", "ちくわのビヤフリッター"],
+    date: "2025.07.24",
+    hotel: "住庄ほてる",
+    hotelAccess: "人形町駅より徒歩3分／茅場町駅より徒歩12分",
+    hotelNote: "昭和22年創業の旅館をリノベーションしたビジホ。",
+    hotelPrice: "8,800円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.6795,
+    lng: 139.7826
+  },
+  {
+    ep: "#84",
+    name: "とり健",
+    pref: "東京都",
+    city: "中央区（茅場町）",
+    region: "関東",
+    desc: "紀州備長炭で店主が丁寧に焼き上げる焼き鳥が人気のお店。せぎもやつくねでほろ酔いに。",
+    tags: ["せぎも", "煮込み", "つくね", "サッポロラガービール"],
+    date: "2025.07.24",
+    hotel: "住庄ほてる",
+    hotelAccess: "人形町駅より徒歩3分／茅場町駅より徒歩12分",
+    hotelNote: "昭和22年創業の旅館をリノベーションしたビジホ。",
+    hotelPrice: "8,800円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.6805,
+    lng: 139.7815
+  },
+  /* 第85回 */
+  {
+    ep: "#85",
+    name: "楽味屋 高砂",
+    pref: "茨城県",
+    city: "土浦市",
+    region: "関東",
+    desc: "創業80年以上、釜めしが名物の老舗居酒屋。小柱が入った絶品釜めしと焼酎でほろ酔いに。",
+    tags: ["小柱釜めし", "あじたたき", "若鶏唐揚"],
+    date: "2025.07.31",
+    hotel: "ビジネスホテル トキワ",
+    hotelAccess: "JR土浦駅東口より徒歩約5分",
+    hotelNote: "釣り人も訪れる河川敷沿いのビジホ。釣り竿の無料貸出も。",
+    hotelPrice: "6,300円（1泊素泊まり、1室1名様あたり）",
+    lat: 36.0797,
+    lng: 140.2044
+  },
+  /* 第86回 */
+  {
+    ep: "#86",
+    name: "熊谷の歓楽街 おまかせ料理店",
+    pref: "埼玉県",
+    city: "熊谷市",
+    region: "関東",
+    desc: "サウナ付き大浴場で汗を流した後に訪れた、おまかせ料理のお店。緑の出汁巻き玉子とマスター厳選の地酒で一杯。",
+    tags: ["おまかせ料理", "出汁巻き玉子", "利き酒"],
+    date: "2025.08.07",
+    hotel: "ホテルグランワイズ熊谷駅前プレミア",
+    hotelAccess: "熊谷駅より徒歩3分",
+    hotelNote: "猛暑でも行きやすい駅近のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 36.147,
+    lng: 139.3888
+  },
+  /* 第87回 */
+  {
+    ep: "#87",
+    name: "おかみの手料理 夕顔",
+    pref: "山形県",
+    city: "鶴岡市",
+    region: "東北",
+    desc: "元旅館の女将が作る郷土料理と地酒が楽しめるカウンターのみのお店。おまかせ料理でほろ酔いに。",
+    tags: ["御料理おまかせ", "地酒 白露垂珠", "地酒 雲の上"],
+    date: "2025.08.14",
+    hotel: "HOTEL STAY iN 山王プラザ プレミア ANNEX",
+    hotelAccess: "JR鶴岡駅より徒歩0分",
+    hotelNote: "2013年創業、山形県内5店舗展開のステイインホテルズ系列。",
+    hotelPrice: "6,800円（1泊朝食付き、1室1名様あたり）",
+    lat: 38.7274,
+    lng: 139.8266
+  },
+  /* 第88回 */
+  {
+    ep: "#88",
+    name: "おまつ",
+    pref: "山形県",
+    city: "山形市",
+    region: "東北",
+    desc: "創業92年。気品溢れる女将さんが目の前で具材を入れてくれる絶品の鳥叩き鍋が看板料理のお酒に合うお店。",
+    tags: ["鳥叩き鍋", "くじらホワイトベーコン", "鮪のマリネ", "おじや", "地酒"],
+    date: "2025.08.21",
+    hotel: "山形七日町ワシントンホテル",
+    hotelAccess: "車：JR山形駅東口より約7分",
+    hotelNote: "繁華街「七日町」に位置。1階に大浴場「めぐみの湯」完備。",
+    hotelPrice: "6,600円（1泊素泊まり）",
+    lat: 38.2528,
+    lng: 140.3392
+  },
+  /* 第89回 */
+  {
+    ep: "#89",
+    name: "酒仙 ふくろう亭",
+    pref: "沖縄県",
+    city: "那覇市",
+    region: "九州",
+    desc: "祖母と孫で切り盛りする小料理屋。こだわりの沖縄家庭料理と泡盛で一杯やります。",
+    tags: ["ジーマーミ", "島ラッキョウ", "ラフティー", "もずく天", "ミヌダル", "泡盛"],
+    date: "2025.08.28",
+    hotel: "KARIYUSHI LCH. Izumizaki 県庁前",
+    hotelAccess: "県庁前駅より徒歩4分",
+    hotelNote: "ロフトのある破格なビジホ。いつもとは違う雰囲気のシャワーシーンをお届け。",
+    hotelPrice: "4,700円（1泊素泊まり）",
+    lat: 26.2125,
+    lng: 127.6792
+  },
+  {
+    ep: "#89",
+    name: "べんり屋 玉玲瓏",
+    pref: "沖縄県",
+    city: "那覇市",
+    region: "九州",
+    desc: "1969年創業、栄町市場商店街にある惣菜屋さんから始まった餃子や小籠包が人気のお店。",
+    tags: ["焼餃子", "さんぴんハイ", "栄町市場商店街"],
+    date: "2025.08.28",
+    hotel: "KARIYUSHI LCH. Izumizaki 県庁前",
+    hotelAccess: "県庁前駅より徒歩4分",
+    hotelNote: "ロフトのある破格なビジホ。いつもとは違う雰囲気のシャワーシーンをお届け。",
+    hotelPrice: "4,700円（1泊素泊まり）",
+    lat: 26.2171,
+    lng: 127.6922
+  },
+  /* 第90回 */
+  {
+    ep: "#90",
+    name: "オクタマリョウタ",
+    pref: "神奈川県",
+    city: "茅ヶ崎市",
+    region: "関東",
+    desc: "サーフィン好きの店主が営む新鮮な海鮮が人気の居酒屋。生ビールと炒める“たこめし”で一杯。",
+    tags: ["本まぐろ切り落し", "ちーちく磯部揚げ", "りょうたのもつ煮", "たこめし"],
+    date: "2025.09.04",
+    hotel: "8HOTEL CHIGASAKI",
+    hotelAccess: "JR茅ヶ崎駅南口より徒歩4分",
+    hotelNote: "プール＆サウナ付きのまるでリゾートホテルのようなビジホ。",
+    hotelPrice: "11,000円（1泊朝食・水着レンタル付き）",
+    lat: 35.3236,
+    lng: 139.4072
+  },
+  /* 第91回 */
+  {
+    ep: "#91",
+    name: "元気酒場 一笑一杯",
+    pref: "東京都",
+    city: "葛飾区（青戸）",
+    region: "関東",
+    desc: "コの字カウンターと割材が入った“どぶづけ”が特徴的。女将が厳選したビールと旨肉大根煮を満喫。",
+    tags: ["サッポロ生ビール黒ラベル", "冷し焼なす", "刺身二点盛", "サバかつ", "旨肉大根煮", "笑ボール"],
+    date: "2025.09.11",
+    hotel: "ホテルアカイ",
+    hotelAccess: "青砥駅より徒歩1分",
+    hotelNote: "カプセルホテル併設。2階男性専用大浴場あり。",
+    hotelPrice: "8,500円（1泊素泊まり）",
+    lat: 35.7472,
+    lng: 139.8569
+  },
+  /* 第92回 */
+  {
+    ep: "#92",
+    name: "炭火串焼 とり久",
+    pref: "福岡県",
+    city: "久留米市",
+    region: "九州",
+    desc: "文化街周辺にある老舗の屋台の味を受け継ぐ焼鳥屋さん。おまかせの串と焼酎で一杯。",
+    tags: ["自家製ポテトサラダ", "おまかせ10本セット", "芋焼酎"],
+    date: "2025.09.18",
+    hotel: "グリーンリッチホテル久留米",
+    hotelAccess: "西鉄久留米駅西口より徒歩12分",
+    hotelNote: "フィットネスルームや天然温泉・サウナの大浴場を完備。",
+    hotelPrice: "10,000円（1泊素泊まり）",
+    lat: 33.3156,
+    lng: 130.5114
+  },
+  /* 第93回 */
+  {
+    ep: "#93",
+    name: "遠州屋 高尾",
+    pref: "東京都",
+    city: "荒川区（南千住）",
+    region: "関東",
+    desc: "ゲストに椿鬼奴さんを迎えて訪問。創業99年、安くて美味しい料理が人気の老舗居酒屋。ラストはケンコバのお茶漬けで〆。",
+    tags: ["椿鬼奴", "平目", "自家製スモークベーコン", "新ニラ玉", "ちくわ天", "だしちゃづけ"],
+    date: "2025.10.02",
+    hotel: "ホテル丸忠CLASSICO",
+    hotelAccess: "東京メトロ南千住駅より徒歩7分",
+    hotelNote: "男女入れ替え制の大浴場完備。",
+    hotelPrice: "4,500円（1泊素泊まり）",
+    lat: 35.7289,
+    lng: 139.7964
+  },
+  /* 第94回 */
+  {
+    ep: "#94",
+    name: "おでん処 大酉茶屋",
+    pref: "石川県",
+    city: "金沢市",
+    region: "中部",
+    desc: "金沢おでんと日本酒「菊姫」が10種類以上取り揃うお店。絶品の金沢おでんを味わい尽くす。",
+    tags: ["金沢おでん", "くるまふ", "梅貝", "車ふ玉子おとし", "菊姫 純米ひやおろし"],
+    date: "2025.10.09",
+    hotel: "岡ホテル",
+    hotelAccess: "金沢駅東口より徒歩3分",
+    hotelNote: "74年続く家族経営のホテル。小浴場あり。",
+    hotelPrice: "4,600円（1泊素泊まり）",
+    lat: 36.5783,
+    lng: 136.6503
+  },
+  {
+    ep: "#94",
+    name: "片町一基Z",
+    pref: "石川県",
+    city: "金沢市",
+    region: "中部",
+    desc: "バナナマン日村さんがロケ終わりに食べた絶品ラーメンのお店。全国から集めたこだわりスープと麺。",
+    tags: ["バナナマン日村", "地鶏中華らぁ麺 醤油", "レモンサワー"],
+    date: "2025.10.09",
+    hotel: "岡ホテル",
+    hotelAccess: "金沢駅東口より徒歩3分",
+    hotelNote: "74年続く家族経営のホテル。小浴場あり。",
+    hotelPrice: "4,600円（1泊素泊まり）",
+    lat: 36.5589,
+    lng: 136.6528
+  },
+  /* 第95回 */
+  {
+    ep: "#95",
+    name: "酔笑苑",
+    pref: "神奈川県",
+    city: "厚木市",
+    region: "関東",
+    desc: "創業60年、厚木名物「豚ホルモン」が人気の焼肉店。灼熱の中でシロコロやホルモンミックスを堪能し、特製半ラーメンで〆。",
+    tags: ["シロコロ", "ホルモンミックス", "特製半ラーメン", "フリージングハイボール"],
+    date: "2025.10.16",
+    hotel: "厚木ホテル夕霧",
+    hotelAccess: "小田急線本厚木駅より徒歩6分",
+    hotelNote: "本格的な洋食レストランを併設。朝食定食はルームサービス可能。",
+    hotelPrice: "6,700円（1泊朝食付き）",
+    lat: 35.4389,
+    lng: 139.3664
+  },
+  /* 第96回 */
+  {
+    ep: "#96",
+    name: "ぶ器用中華 シェイシェイ",
+    pref: "東京都",
+    city: "中野区",
+    region: "関東",
+    desc: "アットホームな空間で本格中華が食べられる大衆居酒屋。サワーと名物チャーシューエッグで一杯。",
+    tags: ["チャーシューエッグ", "油もやし", "焼餃子", "塩レモンサワー"],
+    date: "2025.10.23",
+    hotel: "BusinessHotel CRESCENT",
+    hotelAccess: "中野駅周辺",
+    hotelNote: "中野駅周辺唯一のビジホ。ひのきの香りを感じる客室。",
+    hotelPrice: "7,100円（1泊朝食付き）",
+    lat: 35.7061,
+    lng: 139.6658
+  },
+  /* 第97回 */
+  {
+    ep: "#97",
+    name: "魚処 やつはし",
+    pref: "富山県",
+    city: "富山市",
+    region: "中部",
+    desc: "富山の漁港から仕入れた旬の魚と地酒が楽しめるお店。黒作りやホタルイカ沖漬け、サス昆布〆でほろ酔い。",
+    tags: ["黒作り", "自家製ホタルイカ沖漬け", "サス昆布〆", "三笑楽", "雑魚汁"],
+    date: "2025.10.30",
+    hotel: "富山マンテンホテル",
+    hotelAccess: "JR富山駅徒歩10分 / 桜橋電停すぐ",
+    hotelNote: "11階にサウナや露天感覚を楽しめる大浴場完備。",
+    hotelPrice: "7,500円（1泊素泊まり）",
+    lat: 36.6953,
+    lng: 137.2144
+  },
+  {
+    ep: "#97",
+    name: "ラーメン一心",
+    pref: "富山県",
+    city: "富山市",
+    region: "中部",
+    desc: "富山名物の煮玉子ブラックラーメンで締めくくる。",
+    tags: ["富山ブラック", "煮玉子ブラックラーメン"],
+    date: "2025.10.30",
+    hotel: "富山マンテンホテル",
+    hotelAccess: "JR富山駅徒歩10分 / 桜橋電停すぐ",
+    hotelNote: "11階にサウナや露天感覚を楽しめる大浴場完備。",
+    hotelPrice: "7,500円（1泊素泊まり）",
+    lat: 36.7011,
+    lng: 137.2128
+  },
+  /* 第98回 */
+  {
+    ep: "#98",
+    name: "早稲田 源兵衛",
+    pref: "東京都",
+    city: "新宿区（高田馬場）",
+    region: "関東",
+    desc: "バナナマン日村さんがウォーキング中に気になった創業100年の老舗居酒屋。名物のシューマイと日本酒で一杯。",
+    tags: ["バナナマン日村", "シューマイ", "焼鳥", "肉豆腐", "菊正宗"],
+    date: "2025.11.06",
+    hotel: "ベッセルイン高田馬場駅前",
+    hotelAccess: "高田馬場駅4番出口直結",
+    hotelNote: "スチームサウナやマッサージチェア完備のスイートも話題の駅直結ビジホ。",
+    hotelPrice: "22,500円（1泊朝食付き）",
+    lat: 35.7128,
+    lng: 139.7039
+  },
+  /* 第99回 */
+  {
+    ep: "#99",
+    name: "茶漬け屋 こっからっしょ",
+    pref: "滋賀県",
+    city: "大津市",
+    region: "近畿",
+    desc: "日替わりのおばんざいや海鮮料理などが楽しめるお茶漬け屋。おばんざい盛りでほろ酔いになり、銀だらの西京焼き茶漬けで〆。",
+    tags: ["おばんざいっしょ", "明太子の天ぷら", "銀だらの西京焼き茶漬け", "三岳"],
+    date: "2025.11.13",
+    hotel: "ホテルテトラ大津・京都",
+    hotelAccess: "JR大津駅南口直結",
+    hotelNote: "髪の薄い方の自己申告で割引きになるユニークな【ハゲ割】サービスあり。",
+    hotelPrice: "8,800円（1泊朝食付き）",
+    lat: 35.0031,
+    lng: 135.8647
+  },
+  /* 第100回 */
+  {
+    ep: "#100",
+    name: "酒功賛",
+    pref: "佐賀県",
+    city: "佐賀市",
+    region: "九州",
+    desc: "旬の魚介がメインの日替わり料理を楽しめるお店。ボリュームたっぷりのカツ丼とビールで記念すべき100回目に乾杯。",
+    tags: ["カツ丼", "刺身盛り合わせ", "自家製丸天"],
+    date: "2025.11.20",
+    hotel: "コンフォートホテル佐賀",
+    hotelAccess: "JR佐賀駅北口より徒歩約1分",
+    hotelNote: "地下600mから湧く天然温泉施設も楽しめる駅近ビジホ。",
+    hotelPrice: "6,500円～（1泊朝食付き、1室1名様あたり）",
+    lat: 33.2494,
+    lng: 130.2988
+  },
+  /* 第101回 */
+  {
+    ep: "#101",
+    name: "うまいもんどころ 味一番",
+    pref: "東京都",
+    city: "江東区（亀戸）",
+    region: "関東",
+    desc: "100円のお鍋が名物の海鮮居酒屋。カレー鍋と芋焼酎のソーダ割りで一杯やる1軒目。",
+    tags: ["カレー鍋", "ハラス焼", "わさび寿司"],
+    date: "2025.11.27",
+    hotel: "スーパーホテル東京・亀戸",
+    hotelAccess: "JR亀戸駅北口より徒歩5分",
+    hotelNote: "ウェルカムバーやアメニティ選択が充実したビジホ。",
+    hotelPrice: "9,000円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.6975,
+    lng: 139.8262
+  },
+  {
+    ep: "#101",
+    name: "亀戸餃子 本店",
+    pref: "東京都",
+    city: "江東区（亀戸）",
+    region: "関東",
+    desc: "創業72年の餃子専門店。亀戸で有名な焼き餃子で〆の一軒。",
+    tags: ["焼き餃子"],
+    date: "2025.11.27",
+    hotel: "スーパーホテル東京・亀戸",
+    hotelAccess: "JR亀戸駅北口より徒歩5分",
+    hotelNote: "ウェルカムバーやアメニティ選択が充実したビジホ。",
+    hotelPrice: "9,000円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.6971,
+    lng: 139.825
+  },
+  /* 第102回 */
+  {
+    ep: "#102",
+    name: "山ふたり",
+    pref: "和歌山県",
+    city: "和歌山市",
+    region: "近畿",
+    desc: "炭火炙り料理とおばんざいが美味しい地元で人気の居酒屋。女将の炙り料理とコウバシ茶割りで一杯。",
+    tags: ["造り盛り", "ブリの照り焼き", "コウバシ茶割り"],
+    date: "2025.12.04",
+    hotel: "ビジネスホテルかつや",
+    hotelAccess: "JR和歌山駅より徒歩7分",
+    hotelNote: "レトロな雰囲気が落ち着く家族経営のビジホ。ファミリー式共同浴場あり。",
+    hotelPrice: "7,480円（1泊朝食付き、1室1名様あたり）",
+    lat: 34.226,
+    lng: 135.1675
+  },
+  /* 第103回 */
+  {
+    ep: "#103",
+    name: "田舎亭",
+    pref: "兵庫県",
+    city: "神戸市（新開地）",
+    region: "近畿",
+    desc: "新鮮な魚介や肉料理、スッポン・フグも味わえるアットホームなお店。スッポンづくしの晩餐でほろ酔いに。",
+    tags: ["スッポンコース", "天然本マグロお造り", "スッポンの血 赤ワイン割"],
+    date: "2025.12.11",
+    hotel: "ホテルサンルートソプラ神戸アネッサ",
+    hotelAccess: "新開地駅より徒歩約3分",
+    hotelNote: "スリープアドバイザーによる枕セレクトがある快眠特化型ホテル。",
+    hotelPrice: "9,000円（1泊素泊まり、1室1名様あたり）",
+    lat: 34.6631,
+    lng: 135.1671
+  },
+  /* 第104回 */
+  {
+    ep: "#104",
+    name: "居酒屋 屋久島",
+    pref: "千葉県",
+    city: "浦安市",
+    region: "関東",
+    desc: "鹿児島県・屋久島から仕入れる料理や焼酎が楽しめる居酒屋。つきあげやとび魚の唐揚げで一杯。",
+    tags: ["つきあげ", "とび魚の唐揚", "さばこぶじめ", "三岳"],
+    date: "2025.12.18",
+    hotel: "浦安ビューフォートホテル",
+    hotelAccess: "東京メトロ浦安駅より徒歩1分",
+    hotelNote: "東京ディズニーリゾートへバス20分の好立地ビジホ。",
+    hotelPrice: "11,000円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.6531,
+    lng: 139.9025
+  },
+  /* 大晦日SP */
+  {
+    ep: "大晦日SP",
+    name: "一平八平",
+    pref: "愛媛県",
+    city: "松山市",
+    region: "四国",
+    desc: "常連客で賑わう家族経営の小料理屋。愛媛名産のタイの刺身盛り合わせと牛肉タタキで大晦日にほろ酔いに。",
+    tags: ["刺身盛り合わせ", "牛肉のタタキ", "よだれ茄子"],
+    date: "2025.12.31",
+    hotel: "ホテルたいよう農園 二番町",
+    hotelAccess: "勝山町駅より徒歩4分",
+    hotelNote: "農家が営む朝食自慢のビジホ。客室から松山城を望む。",
+    hotelPrice: "7,000円（1泊朝食付き、1室1名様あたり）",
+    lat: 33.8393,
+    lng: 132.7657
+  },
+  /* 第105回 */
+  {
+    ep: "#105",
+    name: "赤とんぼ",
+    pref: "福岡県",
+    city: "北九州市（小倉）",
+    region: "九州",
+    desc: "3代目女将が切り盛りする鮮魚や郷土料理のお店。フグ刺しと芋焼酎でほろ酔いに。",
+    tags: ["フグ刺し", "おまかせ刺し盛", "サバのぬかだき"],
+    date: "2026.01.08",
+    hotel: "ホテル1-2-3小倉",
+    hotelAccess: "JR小倉駅より徒歩10分",
+    hotelNote: "北九州の台所「旦過市場」近くのビジホ。",
+    hotelPrice: "6,700円（1泊朝食無料、1室1名様あたり）",
+    lat: 33.8834,
+    lng: 130.8752
+  },
+  /* 第106回 */
+  {
+    ep: "#106",
+    name: "宝泉",
+    pref: "東京都",
+    city: "北区（王子）",
+    region: "関東",
+    desc: "創業約50年、お酒にピッタリのおつまみが揃う人気の大衆酒場。名物「やわりめ」とホッピーで一杯。",
+    tags: ["やわりめ", "からみもち", "竹輪天"],
+    date: "2026.01.15",
+    hotel: "TOKIO's HOTEL",
+    hotelAccess: "JR王子駅北口より徒歩3分",
+    hotelNote: "サウナやコワーキングスペースを併設するビジホ。",
+    hotelPrice: "7,300円（1泊朝食付き、1室1名様あたり）",
+    lat: 35.755,
+    lng: 139.7383
+  },
+  /* 第107回 */
+  {
+    ep: "#107",
+    name: "若竹",
+    pref: "大阪府",
+    city: "豊中市（螢池）",
+    region: "近畿",
+    desc: "旬の魚をメインに日替わりのおすすめメニューが楽しめる割烹居酒屋。活ズワイガニと日本酒でほろ酔いに。",
+    tags: ["活ズワイガニボイル", "明石蛸バター焼", "カニミソ"],
+    date: "2026.01.22",
+    hotel: "ビジネスホテルつじ井",
+    hotelAccess: "阪急・大阪モノレール蛍池駅より徒歩1分",
+    hotelNote: "1・2階に飲食店が入る、一杯やるのにもってこいなビジホ。",
+    hotelPrice: "7,200円（大阪府宿泊税込・朝食1,000円）",
+    lat: 34.7802,
+    lng: 135.4402
+  },
+  /* 第108回 */
+  {
+    ep: "#108",
+    name: "すすきののビジホ泊（ゲスト：野々村友紀子）",
+    pref: "北海道",
+    city: "札幌市",
+    region: "北海道",
+    desc: "番組3回目の札幌。ケンコバさん養成所時代の同期・野々村友紀子さんをゲストに迎え、サウナ付き大浴場でそれぞれのビジホ泊を満喫。",
+    tags: ["サウナ付き大浴場", "ゲスト回"],
+    date: "2026.01.29",
+    hotel: "ビジネスホテルライン",
+    hotelAccess: "すすきの駅・豊水すすきの駅より徒歩10分",
+    hotelNote: "宿泊者は男女交代制で無料、日帰り利用も可能な浴場が魅力。",
+    hotelPrice: "4,300円（1泊素泊まり、1室1名様あたり）",
+    lat: 43.0554,
+    lng: 141.3536
+  },
+  /* 第109回 */
+  {
+    ep: "#109",
+    name: "居酒屋ふる里 札幌総本店",
+    pref: "北海道",
+    city: "札幌市",
+    region: "北海道",
+    desc: "昭和54年創業、市場で仕入れたこだわりの魚が人気のお店。新鮮な海鮮と地酒で同期トークに花が咲く。",
+    tags: ["ホッケ・八角・生にしん刺身", "クジラの竜田揚げ", "国稀 北海鬼ころし"],
+    date: "2026.02.05",
+    hotel: "ビジネスホテルライン",
+    hotelAccess: "すすきの駅・豊水すすきの駅より徒歩10分",
+    hotelNote: "宿泊者は男女交代制で無料、日帰り利用も可能な浴場が魅力。",
+    hotelPrice: "4,300円（1泊素泊まり、1室1名様あたり）",
+    lat: 43.0578,
+    lng: 141.354
+  },
+  /* 第110回 */
+  {
+    ep: "#110",
+    name: "赤ちょうちん てんまる",
+    pref: "三重県",
+    city: "熊野市",
+    region: "近畿",
+    desc: "赤ちょうちんが目印の、日替わりのおばんざいと旬の魚料理が楽しめる居酒屋。マンボウと熱燗でほろ酔いに。",
+    tags: ["お造り5種盛り", "マンボウ", "ちくわの磯辺揚げ"],
+    date: "2026.02.12",
+    hotel: "ビジネスホテル河上",
+    hotelAccess: "JR熊野市駅より徒歩5分",
+    hotelNote: "かつてニューヨーク・屋敷さんの母も働いていたという昔ながらのビジホ。",
+    hotelPrice: "5,500円（1泊朝食付き、1室1名様あたり）",
+    lat: 33.8916,
+    lng: 136.0983
+  },
+  /* 第111回 */
+  {
+    ep: "#111",
+    name: "一月家",
+    pref: "三重県",
+    city: "伊勢市",
+    region: "近畿",
+    desc: "創業112年の老舗居酒屋。お湯でじっくり温めた湯どうふとふくだめ（トコブシ）が名物。カレーと緑茶ハイで一杯。",
+    tags: ["湯どうふ", "ふくだめ", "カレー"],
+    date: "2026.02.19",
+    hotel: "三交イン伊勢市駅前「別館」Grande",
+    hotelAccess: "伊勢市駅前",
+    hotelNote: "本物のバスの運転席を移設したコンセプトツインルームが話題。",
+    hotelPrice: "要問合せ",
+    lat: 34.4881,
+    lng: 136.7108
+  },
+  /* 第112回 */
+  {
+    ep: "#112",
+    name: "壱豚",
+    pref: "神奈川県",
+    city: "横浜市（鶴見区）",
+    region: "関東",
+    desc: "豚料理を中心に楽しめる、ストロングスタイルな店内が印象的なお店。かつサンドとコダマバイスサワーで一杯。",
+    tags: ["かつサンド", "コダマバイスサワー", "ホッピー"],
+    date: "2026.02.26",
+    hotel: "ビジネスホテルときわ",
+    hotelAccess: "鶴見駅より徒歩約4分",
+    hotelNote: "落ち着く和室と浴室で疲れを取れるビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.5083,
+    lng: 139.6773
+  },
+  /* 第113回 */
+  {
+    ep: "#113",
+    name: "お遊食おせん",
+    pref: "岐阜県",
+    city: "岐阜市",
+    region: "中部",
+    desc: "岐阜の食材を使った旬の料理とジビエ料理が楽しめる小料理屋。極上ロースの猪ぼたん鍋で一杯。",
+    tags: ["猪ぼたん鍋", "鮎", "ジビエ料理"],
+    date: "2026.03.05",
+    hotel: "ABホテル 岐阜",
+    hotelAccess: "岐阜市内",
+    hotelNote: "東海エリアを中心に展開するビジホ。広々とした大浴場が自慢。",
+    hotelPrice: "要問合せ",
+    lat: 35.4227,
+    lng: 136.7606
+  },
+  /* 第114回 */
+  {
+    ep: "#114",
+    name: "ヤマヤ東口本店",
+    pref: "埼玉県",
+    city: "春日部市",
+    region: "関東",
+    desc: "刺身から鍋まで幅広いラインナップが楽しめる、ホテルと同系列のお店。シューマイやハンバーグを瓶ビールで。",
+    tags: ["手作りシューマイ", "ハンバーグ", "カレーライス"],
+    date: "2026.03.12",
+    hotel: "ビジネスホテル やまや新館",
+    hotelAccess: "駅からほど近い立地",
+    hotelNote: "居酒屋や宴会場も備える完結型のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.9752,
+    lng: 139.7527
+  },
+  /* 第115回 */
+  {
+    ep: "#115",
+    name: "秋田料理ちゃわん屋",
+    pref: "秋田県",
+    city: "秋田市",
+    region: "東北",
+    desc: "秋田最大級の歓楽街「川反」周辺にある郷土料理の名店。きりたんぽとだまっこのミックス鍋で一杯。",
+    tags: ["きりたんぽ&だまっこ鍋", "ハタハタ"],
+    date: "2026.03.19",
+    hotel: "ホテルなにわ",
+    hotelAccess: "秋田市内",
+    hotelNote: "ひのき風呂で体の芯まで温まる家族経営のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 39.7186,
+    lng: 140.1024
+  },
+  /* 第116回 */
+  {
+    ep: "#116",
+    name: "チョロ松",
+    pref: "大分県",
+    city: "別府市",
+    region: "九州",
+    desc: "創業71年の老舗居酒屋。地酒と郷土料理を心ゆくまで堪能し、名物「かも吸そば入り」で〆る。",
+    tags: ["関サバの琉球", "豚天", "かも吸そば入り"],
+    date: "2026.04.02",
+    hotel: "ホテル フジヨシ",
+    hotelAccess: "別府駅前",
+    hotelNote: "源泉掛け流しの天然温泉が満喫できるビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 33.2846,
+    lng: 131.4913
+  },
+  /* 第117回 */
+  {
+    ep: "#117",
+    name: "いわし料理 いなせ",
+    pref: "大分県",
+    city: "大分市",
+    region: "九州",
+    desc: "主にいわし料理を振る舞う雰囲気良しなお店。焼酎のお湯割りとともにいわし尽くしを味わい尽くす。",
+    tags: ["刺身", "かば焼き", "姿寿司"],
+    date: "2026.04.09",
+    hotel: "アリストンホテル大分",
+    hotelAccess: "駅から徒歩2分",
+    hotelNote: "天然温泉とサウナ、ロビー横のウェルカム焼酎が魅力のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 33.2382,
+    lng: 131.6126
+  },
+  /* 第118回 */
+  {
+    ep: "#118",
+    name: "大黒庵",
+    pref: "大阪府",
+    city: "堺市",
+    region: "近畿",
+    desc: "お母さんと娘さんで営むアットホームなお店。おばんざいと創作料理、旨い酒でほろ酔いに。",
+    tags: ["おばんざい", "創作料理"],
+    date: "2026.04.16",
+    hotel: "ビジネスホテル ニュー大浜",
+    hotelAccess: "堺駅近く",
+    hotelNote: "昭和の雰囲気が色濃く残る、大きな浴槽の大浴場が自慢のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 34.5732,
+    lng: 135.483
+  },
+  /* 第119回 */
+  {
+    ep: "#119",
+    name: "門真れんこん屋",
+    pref: "大阪府",
+    city: "門真市",
+    region: "近畿",
+    desc: "地元のれんこんを使った料理が食べられるお店。白あえやきんぴらをれんこん焼酎とともに味わい尽くす。",
+    tags: ["白あえ", "きんぴら", "れんこん焼酎"],
+    date: "2026.04.23",
+    hotel: "ホテルアインズ大阪門真市駅前 ととのい乃湯",
+    hotelAccess: "門真市駅前",
+    hotelNote: "サウナやフィットネスジムも備える充実設備のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 34.7378,
+    lng: 135.5719
+  },
+  /* 第120回 */
+  {
+    ep: "#120",
+    name: "魚菜や",
+    pref: "広島県",
+    city: "呉市",
+    region: "中国",
+    desc: "日替わりのおばんざいと関西風・関東風2種のおでんが楽しめるお店。ちくわのおでんを食べ比べる。",
+    tags: ["おでん", "肉じゃが"],
+    date: "2026.04.30",
+    hotel: "ビジネスホテル三島",
+    hotelAccess: "呉市内",
+    hotelNote: "昭和の面影を残すアットホームな佇まい。この日は家族風呂で温まる。",
+    hotelPrice: "要問合せ",
+    lat: 34.2492,
+    lng: 132.5656
+  },
+  /* 第121回 */
+  {
+    ep: "#121",
+    name: "食楽処 かわ西",
+    pref: "山口県",
+    city: "周南市",
+    region: "中国",
+    desc: "創業27年、周南市出身のスタッフおすすめのフグが自慢のお店。ふくさしと地酒でほろ酔いに。",
+    tags: ["ふくさし", "鯨刺"],
+    date: "2026.05.07",
+    hotel: "ホテル徳山ヒルズ 平和通り店",
+    hotelAccess: "徳山駅前アーケード商店街",
+    hotelNote: "大浴場でひとっ風呂浴びてから繁華街へ。",
+    hotelPrice: "要問合せ",
+    lat: 34.0546,
+    lng: 131.8058
+  },
+  /* 第122回 */
+  {
+    ep: "#122",
+    name: "六兵衛",
+    pref: "青森県",
+    city: "青森市",
+    region: "東北",
+    desc: "創業46年、貝焼みそなど青森の旬の名物が堪能できるお店。金魚ねぶたが飾られた風情ある空間で一杯。",
+    tags: ["貝焼みそ", "いかげそ揚", "リンゴチューハイ"],
+    date: "2026.05.14",
+    hotel: "ホテル2135",
+    hotelAccess: "青森駅周辺",
+    hotelNote: "お店が並ぶ青森駅周辺にある不思議な名前のビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 40.8246,
+    lng: 140.7406
+  },
+  /* 第123回 */
+  {
+    ep: "#123",
+    name: "大衆酒場 若林",
+    pref: "千葉県",
+    city: "船橋市",
+    region: "関東",
+    desc: "クセの強いラムが楽しめる大衆酒場。博多華丸さんをゲストに迎え、ジンギスカンと肉豆腐で一杯。",
+    tags: ["ジンギスカン", "肉豆腐"],
+    date: "2026.05.28",
+    hotel: "ホテル市松",
+    hotelAccess: "船橋駅前繁華街",
+    hotelNote: "昭和レトロな気品あるビジホ。2人で仲良く大浴場へ。",
+    hotelPrice: "要問合せ",
+    lat: 35.6947,
+    lng: 139.9827
+  },
+  /* 第124回 */
+  {
+    ep: "#124",
+    name: "白龍 本店",
+    pref: "岩手県",
+    city: "盛岡市",
+    region: "東北",
+    desc: "盛岡三大麺のじゃじゃ麺が名物のお店。ちいたんたんで〆る昼のひととき。",
+    tags: ["じゃじゃ麺", "ちいたんたん"],
+    date: "2026.06.04",
+    hotel: "ブライトイン盛岡",
+    hotelAccess: "盛岡市内",
+    hotelNote: "建物内にラジオスタジオがあるユニークなビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 39.7025,
+    lng: 141.152
+  },
+  {
+    ep: "#124",
+    name: "炭火焼き おばちゃん",
+    pref: "岩手県",
+    city: "盛岡市",
+    region: "東北",
+    desc: "店名が気になる炭火焼のお店。おばちゃんとの会話を肴に炭火焼でほろ酔いに。",
+    tags: ["炭火焼"],
+    date: "2026.06.04",
+    hotel: "ブライトイン盛岡",
+    hotelAccess: "盛岡市内",
+    hotelNote: "建物内にラジオスタジオがあるユニークなビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 39.704,
+    lng: 141.1535
+  },
+  /* 第125回 */
+  {
+    ep: "#125",
+    name: "酒食処 もりもと",
+    pref: "岡山県",
+    city: "岡山市",
+    region: "中国",
+    desc: "番組初上陸の岡山県で訪れた郷土料理店。ハイボールとケンコバ大好物のチクワ天で一杯。",
+    tags: ["チクワ天", "岡山の郷土料理"],
+    date: "2026.06.11",
+    hotel: "ホテルアベストグランデ岡山 ～なごみの湯～",
+    hotelAccess: "岡山市内",
+    hotelNote: "商業施設内にあるキレイなビジホ。大浴場とサウナで整える。",
+    hotelPrice: "要問合せ",
+    lat: 34.6551,
+    lng: 133.9195
+  },
+  /* 第126回 */
+  {
+    ep: "#126",
+    name: "錦糸町ホルモン 天狗",
+    pref: "東京都",
+    city: "墨田区（錦糸町）",
+    region: "関東",
+    desc: "提灯が目を引く七輪焼肉屋。後輩のエルフ荒川さんと厚切り肉とサワーでほろ酔いに。",
+    tags: ["七輪焼肉", "厚切り肉"],
+    date: "2026.06.18",
+    hotel: "スーパーホテル東京・錦糸町駅前",
+    hotelAccess: "錦糸町駅近く",
+    hotelNote: "駅近で大浴場も完備したビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.6969,
+    lng: 139.8144
+  },
+  /* 第127回 */
+  {
+    ep: "#127",
+    name: "旬彩つむぎ",
+    pref: "大阪府",
+    city: "西中島",
+    region: "近畿",
+    desc: "女性店主が営む旬の食材が楽しめるお店。活稚鮎天ぷらと白ワインで一杯。",
+    tags: ["活稚鮎天ぷら", "白ワイン"],
+    date: "2026.06.25",
+    hotel: "ホテルクライトン新大阪",
+    hotelAccess: "新大阪駅から徒歩圏内",
+    hotelNote: "レトロモダンな佇まいのビジホ。大浴場で疲れを癒やす。",
+    hotelPrice: "要問合せ",
+    lat: 34.7274,
+    lng: 135.4998
+  },
+  /* 第128回 */
+  {
+    ep: "#128",
+    name: "おでんジャングル",
+    pref: "宮崎県",
+    city: "都城市",
+    region: "九州",
+    desc: "キャベツや豆もやしが入った都城おでんが堪能できるお店。都城市産の芋焼酎とおでんの盛り合わせで一杯。",
+    tags: ["都城おでん", "芋焼酎"],
+    date: "2026.07.02",
+    hotel: "ビジネス旅館マルミ",
+    hotelAccess: "西都城駅そば",
+    hotelNote: "番組初の旅館。女将にタロット占いをしてもらう一幕も。",
+    hotelPrice: "要問合せ",
+    lat: 31.7211,
+    lng: 131.0616
+  },
+  /* 第129回 */
+  {
+    ep: "#129",
+    name: "とととくじら",
+    pref: "大阪府",
+    city: "高槻市",
+    region: "近畿",
+    desc: "くじらを使ったこだわりの料理が楽しめる、スタイリッシュな外観のお店。ハリハリ鍋と日本酒でほろ酔いに。",
+    tags: ["くじらのハリハリ鍋", "日本酒 酔鯨"],
+    date: "2026.07.09",
+    hotel: "ワークホテルアネックス",
+    hotelAccess: "阪急高槻市駅より徒歩3分",
+    hotelNote: "4種類の湯が楽しめる天然温泉付きビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 34.846,
+    lng: 135.618
+  },
+  /* 第130回 */
+  {
+    ep: "#130",
+    name: "山海",
+    pref: "静岡県",
+    city: "富士市",
+    region: "中部",
+    desc: "駿河湾で獲れた鮮魚を使った料理が人気の、入口が独特なお店。金目鯛煮付と地酒でほろ酔いに。",
+    tags: ["金目鯛煮付", "駿河湾の鮮魚"],
+    date: "2026.07.16",
+    hotel: "HOTEL & SAUNA FUJINOS",
+    hotelAccess: "富士駅周辺",
+    hotelNote: "屋上や個室など多様なサウナが楽しめるビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.1642,
+    lng: 138.6764
+  },
+  /* 第131回 */
+  {
+    ep: "#131",
+    name: "和食 たか田",
+    pref: "東京都",
+    city: "府中市",
+    region: "関東",
+    desc: "神泡超達人店の認定を受けた和食店。料亭で腕を磨いた店主による本格魚料理と生ビールでほろ酔いに。",
+    tags: ["本格魚料理", "生ビール"],
+    date: "2026.07.23",
+    hotel: "ビジネスホテルサンライト本館",
+    hotelAccess: "府中市内",
+    hotelNote: "昭和フォントの看板が目を引くノスタルジックなビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.6693,
+    lng: 139.4779
+  },
+  /* 第132回 */
+  {
+    ep: "#132",
+    name: "山甚道場",
+    pref: "茨城県",
+    city: "ひたちなか市",
+    region: "関東",
+    desc: "地元客に愛される大衆居酒屋。一風変わった納豆包み揚げと地酒でほろ酔いに。",
+    tags: ["納豆包み揚げ"],
+    date: "2026.07.30",
+    hotel: "HOTELサンシティ勝田",
+    hotelAccess: "ひたちなか市内",
+    hotelNote: "女将ガチャがあるユニークなビジホ。サウナで整えてから街へ。",
+    hotelPrice: "要問合せ",
+    lat: 36.3958,
+    lng: 140.5386
+  },
+  /* 第133回 */
+  {
+    ep: "#133",
+    name: "名匠 たこ焼 上木家 町屋店",
+    pref: "東京都",
+    city: "荒川区（町屋）",
+    region: "関東",
+    desc: "本場・大阪のたこ焼きでお酒が楽しめるお店。様々な種類のたこ焼きとお茶割りで関西を懐かしむ。",
+    tags: ["たこ焼き", "鍛高譚の緑茶割り"],
+    date: "2026.08.06",
+    hotel: "ハセベ町屋イン",
+    hotelAccess: "町屋駅周辺",
+    hotelNote: "下町情緒あふれる町屋にある、看板がストロングスタイルなビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.7443,
+    lng: 139.7834
+  },
+  /* 第134回 */
+  {
+    ep: "#134",
+    name: "魚と米",
+    pref: "東京都",
+    city: "中央区（東日本橋）",
+    region: "関東",
+    desc: "店主が東京湾で釣った太刀魚や新鮮な魚料理が楽しめるお店。名物の黄金鯵フライと熱燗でほろ酔いに。",
+    tags: ["黄金鯵フライ", "太刀魚"],
+    date: "2026.08.13",
+    hotel: "ホテル奉仕会館",
+    hotelAccess: "東日本橋周辺",
+    hotelNote: "同じビルに問屋が入る、下町情緒を感じられるビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 35.6924,
+    lng: 139.7863
+  },
+  /* 第135回 */
+  {
+    ep: "#135",
+    name: "よしろう",
+    pref: "神奈川県",
+    city: "鎌倉市",
+    region: "関東",
+    desc: "女将が腕をふるう渋めな雰囲気の小料理屋。しらすねぎオムレツと熱燗でほろ酔いに。",
+    tags: ["しらすねぎオムレツ", "熱燗"],
+    date: "2026.08.20",
+    hotel: "トーセイホテル ココネ鎌倉",
+    hotelAccess: "御成通り近く",
+    hotelNote: "和モダンな造りのビジホ。裏小町の飲食店街も散策。",
+    hotelPrice: "要問合せ",
+    lat: 35.3193,
+    lng: 139.5466
+  },
+  /* 第136回 */
+  {
+    ep: "#136",
+    name: "足立屋（1階 大衆酒場）",
+    pref: "沖縄県",
+    city: "名護市",
+    region: "九州",
+    desc: "1階は大衆酒場、2階はヤギ焼肉が楽しめる新感覚な居酒屋。アーケード街や商店街をハシゴしてたどり着く。",
+    tags: ["大衆酒場メニュー"],
+    date: "2026.08.27",
+    hotel: "名護ビジネスホテル",
+    hotelAccess: "名護市内",
+    hotelNote: "エントランス前に庭園があるノスタルジックなビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 26.5918,
+    lng: 128.0253
+  },
+  {
+    ep: "#136",
+    name: "足立屋（2階 ヤギ焼肉）",
+    pref: "沖縄県",
+    city: "名護市",
+    region: "九州",
+    desc: "沖縄でも珍しいヤギ焼肉が味わえる2階フロア。ハシゴ酒の締めくくりにヤギ焼肉でほろ酔いに。",
+    tags: ["ヤギ焼肉"],
+    date: "2026.08.27",
+    hotel: "名護ビジネスホテル",
+    hotelAccess: "名護市内",
+    hotelNote: "エントランス前に庭園があるノスタルジックなビジホ。",
+    hotelPrice: "要問合せ",
+    lat: 26.592,
+    lng: 128.0255
+  },
+  /* 第137回 */
+  {
+    ep: "#137",
+    name: "せんべろしゃぶしゃぶTRITON",
+    pref: "沖縄県",
+    city: "那覇市",
+    region: "九州",
+    desc: "2階でカラオケも楽しめる“せんべろ”しゃぶしゃぶのお店。島豚のしゃぶしゃぶとビールでほろ酔いに。",
+    tags: ["島豚しゃぶしゃぶ", "ビール"],
+    date: "2026.09.03",
+    hotel: "ワイズキャビン&ホテル那覇国際通り",
+    hotelAccess: "国際通りすぐ",
+    hotelNote: "キャビンタイプの客室もあるビジホ。お風呂とサウナで整える。",
+    hotelPrice: "要問合せ",
+    lat: 26.2124,
+    lng: 127.6809
+  }
+];
+
+// App State
+let map, markersGroup;
+let currentRegion = "";
+let currentPref = "";
+let currentSearch = "";
+const markerMap = new Map();
+
+// Initialize
+document.addEventListener("DOMContentLoaded", () => {
+  initStats();
+  initControls();
+  initMap();
+  render();
+});
+
+function initStats() {
+  const prefs = new Set(RAW_SPOTS.map(s => s.pref));
+  const regions = new Set(RAW_SPOTS.map(s => s.region));
+  document.getElementById("stat-count").textContent = RAW_SPOTS.length;
+  document.getElementById("stat-pref").textContent = prefs.size;
+  document.getElementById("stat-region").textContent = regions.size;
+
+  // Pref Select
+  const prefSelect = document.getElementById("pref-select");
+  const sortedPrefs = Array.from(prefs).sort();
+  sortedPrefs.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p;
+    opt.textContent = p;
+    prefSelect.appendChild(opt);
+  });
+}
+
+function initControls() {
+  const chipRow = document.getElementById("chip-row");
+  
+  const allChip = document.createElement("button");
+  allChip.className = "chip active";
+  allChip.textContent = "全国すべて";
+  allChip.onclick = () => filterRegion("", allChip);
+  chipRow.appendChild(allChip);
+
+  REGIONS.forEach(r => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = r;
+    chip.onclick = () => filterRegion(r, chip);
+    chipRow.appendChild(chip);
+  });
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    currentSearch = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  document.getElementById("pref-select").addEventListener("change", (e) => {
+    currentPref = e.target.value;
+    render();
+  });
+}
+
+function filterRegion(region, btnEl) {
+  currentRegion = region;
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  btnEl.classList.add("active");
+  render();
+}
+
+function initMap() {
+  // Center roughly on Japan
+  map = L.map('map', {
+    center: [36.5, 137.5],
+    zoom: 5,
+    zoomControl: true
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  markersGroup = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 35
+  });
+  map.addLayer(markersGroup);
+}
+
+function createLanternIcon() {
+  return L.divIcon({
+    html: '🏮',
+    className: 'lantern-marker',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -12]
+  });
+}
+
+function getFilteredData() {
+  return RAW_SPOTS.filter(spot => {
+    if (currentRegion && spot.region !== currentRegion) return false;
+    if (currentPref && spot.pref !== currentPref) return false;
+    if (currentSearch) {
+      const q = currentSearch;
+      const matchName = spot.name.toLowerCase().includes(q);
+      const matchDesc = spot.desc.toLowerCase().includes(q);
+      const matchCity = spot.city.toLowerCase().includes(q);
+      const matchPref = spot.pref.toLowerCase().includes(q);
+      const matchHotel = spot.hotel.toLowerCase().includes(q);
+      const matchEp = spot.ep.toLowerCase().includes(q);
+      const matchTags = spot.tags.some(t => t.toLowerCase().includes(q));
+      if (!matchName && !matchDesc && !matchCity && !matchPref && !matchHotel && !matchEp && !matchTags) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+function render() {
+  const data = getFilteredData();
+  
+  // Render Map Markers
+  markersGroup.clearLayers();
+  markerMap.clear();
+
+  const bounds = [];
+
+  data.forEach((spot, idx) => {
+    if (spot.lat && spot.lng) {
+      const marker = L.marker([spot.lat, spot.lng], { icon: createLanternIcon() });
+      const popupHtml = `
+        <div class="popup-title">${spot.name} <span style="font-size:0.75rem; color:#d0472c;">(${spot.ep})</span></div>
+        <div class="popup-loc">📍 ${spot.pref} ${spot.city}</div>
+        <div class="popup-desc">${spot.desc}</div>
+        <div class="popup-hotel">🏨 <b>${spot.hotel}</b></div>
+      `;
+      marker.bindPopup(popupHtml);
+      markersGroup.addLayer(marker);
+      markerMap.set(spot, marker);
+      bounds.push([spot.lat, spot.lng]);
+    }
+  });
+
+  if (bounds.length > 0 && (currentRegion || currentPref || currentSearch)) {
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+  } else if (!currentRegion && !currentPref && !currentSearch) {
+    map.setView([36.5, 137.5], 5);
+  }
+
+  // Render Grid
+  const grid = document.getElementById("grid");
+  const emptyMsg = document.getElementById("empty-msg");
+  const listCount = document.getElementById("list-count");
+
+  grid.innerHTML = "";
+  listCount.textContent = `該当 ${data.length} 件`;
+
+  if (data.length === 0) {
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  data.forEach(spot => {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const tagsHtml = spot.tags.map(t => `<span>#${t}</span>`).join("");
+    const gmapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.pref + ' ' + spot.name)}`;
+
+    card.innerHTML = `
+      <div class="eyebrow-row">
+        <span class="ep-tag">${spot.ep}</span>
+        <span>📅 ${spot.date}</span>
+      </div>
+      <h3>${spot.name}</h3>
+      <div class="loc">📍 ${spot.pref} ${spot.city}</div>
+      <div class="desc">${spot.desc}</div>
+      <div class="menu-tags">${tagsHtml}</div>
+      
+      <div class="hotel-box">
+        <div class="hotel-box-head">🏨 宿泊ビジネスホテル</div>
+        <div class="hotel-name">${spot.hotel}</div>
+        <div class="hotel-line">🚶 ${spot.hotelAccess}</div>
+        <div class="hotel-line">ℹ️ ${spot.hotelNote}</div>
+        <div class="hotel-price">💰 ${spot.hotelPrice}</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="locate-btn" onclick="focusSpot('${spot.ep}', '${spot.name}')">🗺️ 地図で見る</button>
+        <a href="${gmapUrl}" target="_blank" rel="noopener" class="gmap-btn">📍 Google Map</a>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function focusSpot(ep, name) {
+  const spot = RAW_SPOTS.find(s => s.ep === ep && s.name === name);
+  if (spot && spot.lat && spot.lng) {
+    const marker = markerMap.get(spot);
+    map.setView([spot.lat, spot.lng], 14, { animate: true });
+    if (marker) {
+      markersGroup.zoomToShowLayer(marker, () => {
+        marker.openPopup();
+      });
+    }
+    document.getElementById("map").scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+</script>
+</body>
+</html>
